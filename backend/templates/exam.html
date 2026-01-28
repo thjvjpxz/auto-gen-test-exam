@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ exam.exam_title }}</title>
+
+    <!-- Google Fonts: Inter for modern, clean Vietnamese text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            color: #212121;
+            background: #ffffff;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Header Section */
+        .exam-header {
+            text-align: center;
+            border-bottom: 3px solid #1976d2;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .exam-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1565c0;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .exam-header .meta {
+            font-size: 14px;
+            color: #616161;
+            font-weight: 400;
+        }
+
+        /* Section Styling */
+        .section {
+            margin-bottom: 40px;
+            background: #fafafa;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #1976d2;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1565c0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 24px;
+            background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+            border-radius: 3px;
+        }
+
+        /* ER Diagram Container */
+        .diagram-container {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow-x: auto;
+        }
+
+        .mermaid {
+            text-align: center;
+        }
+
+        /* Questions Styling */
+        .question-block {
+            margin: 20px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        .question-block h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #424242;
+            margin-bottom: 12px;
+        }
+
+        .question-block p {
+            font-size: 15px;
+            color: #616161;
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+
+        .answer-space {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px dashed #e0e0e0;
+        }
+
+        .answer-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .answer-line {
+            border-bottom: 1px dotted #bdbdbd;
+            height: 24px;
+        }
+
+        /* Rules Table Styling */
+        .rules-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .rules-table thead {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            color: white;
+        }
+
+        .rules-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .rules-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+            color: #424242;
+        }
+
+        .rules-table tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .rules-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Scenario Box */
+        .scenario-box {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #ff6f00;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .scenario-box h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e65100;
+            margin-bottom: 12px;
+        }
+
+        .scenario-box p {
+            font-size: 15px;
+            color: #424242;
+            line-height: 1.7;
+        }
+
+        /* Footer */
+        .exam-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            text-align: center;
+            font-size: 13px;
+            color: #757575;
+        }
+
+        /* Print Optimization */
+        @media print {
+            body {
+                padding: 20px;
+            }
+
+            .section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Exam Header -->
+    <header class="exam-header">
+        <h1>{{ exam.exam_title }}</h1>
+        <div class="meta">Thời gian: 90 phút | Không sử dụng tài liệu</div>
+    </header>
+
+    <!-- SQL Part -->
+    <section class="section sql-section">
+        <h2 class="section-title">Phần 1: Cơ Sở Dữ Liệu (SQL)</h2>
+
+        <!-- ER Diagram -->
+        <div class="diagram-container">
+            <h3 style="font-size: 16px; font-weight: 600; color: #424242; margin-bottom: 15px;">
+                Sơ đồ quan hệ thực thể (ERD)
+            </h3>
+            <div class="mermaid">
+                <img src="{{ exam.sql_part.mermaid_image_url }}" alt="ER Diagram" style="max-width: 100%;">
+            </div>
+        </div>
+
+        <!-- SQL Questions -->
+        {% for question in exam.sql_part.questions %}
+        <div class="question-block">
+            <h3>Câu hỏi {{ loop.index }}</h3>
+            <p>{{ question }}</p>
+            <div class="answer-space">
+                <div class="answer-lines">
+                    <div class="answer-line"></div>
+                    <div class="answer-line"></div>
+                    <div class="answer-line"></div>
+                    <div class="answer-line"></div>
+                    <div class="answer-line"></div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <!-- Testing Part -->
+    <section class="section testing-section">
+        <h2 class="section-title">Phần 2: Kiểm Thử Phần Mềm</h2>
+
+        <!-- Scenario -->
+        <div class="scenario-box">
+            <h4>Tình huống</h4>
+            <p>{{ exam.testing_part.scenario }}</p>
+        </div>
+
+        <!-- Rules Table -->
+        {% if exam.testing_part.rules_table %}
+        <h3 style="font-size: 16px; font-weight: 600; color: #424242; margin: 20px 0 10px 0;">
+            Bảng Quy Tắc Nghiệp Vụ
+        </h3>
+        <table class="rules-table">
+            <thead>
+                <tr>
+                    <th style="width: 50%;">Điều kiện</th>
+                    <th style="width: 50%;">Kết quả</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in exam.testing_part.rules_table %}
+                <tr>
+                    <td>{{ rule.condition }}</td>
+                    <td>{{ rule.result }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Testing Question -->
+        <div class="question-block">
+            <h3>Yêu cầu</h3>
+            <p>{{ exam.testing_part.question }}</p>
+            <div class="answer-space">
+                <div class="answer-lines">
+                    {% for i in range(8) %}
+                    <div class="answer-line"></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="exam-footer">
+        <p>--- Hết ---</p>
+        <p>Chúc các bạn làm bài tốt!</p>
+    </footer>
+</body>
+</html>
