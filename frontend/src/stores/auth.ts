@@ -14,7 +14,7 @@ interface AuthState {
 
 let tokenCache: string | null = null;
 let tokenCacheTime: number = 0;
-const CACHE_DURATION = 1000;
+const CACHE_DURATION = 5000;
 
 function getCachedToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -63,9 +63,8 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, isAuthenticated: false });
       },
 
-      clearAuth: () => {
-        setCachedToken(null);
-        set({ user: null, isAuthenticated: false });
+      clearAuth: function () {
+        this.logout();
       },
     }),
     {

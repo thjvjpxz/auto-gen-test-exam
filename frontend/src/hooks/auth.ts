@@ -66,12 +66,10 @@ export function useLogin() {
  */
 export function useRegister() {
   const router = useRouter();
-  const { setUser } = useAuthStore();
 
   return useMutation({
     mutationFn: (data: RegisterFormData) => authService.register(data),
     onSuccess: (userOut) => {
-      setUser(mapUserOutToUser(userOut));
       toast.success("Đăng ký thành công!", {
         description: `Tài khoản ${userOut.email} đã được tạo. Vui lòng đăng nhập.`,
       });
@@ -93,17 +91,20 @@ export function useMe() {
   return useQuery({
     queryKey: authKeys.me(),
     queryFn: async () => {
-      const userOut = await authService.getCurrentUser();
-      setUser(mapUserOutToUser(userOut));
-      return userOut;
+      try {
+        const userOut = await authService.getCurrentUser();
+        setUser(mapUserOutToUser(userOut));
+        return userOut;
+      } catch (error: unknown) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError?.response?.status === 401) {
+          logout();
+        }
+        throw error;
+      }
     },
     enabled: !!token,
     staleTime: 5 * 60 * 1000,
     retry: false,
-    onError: (error: any) => {
-      if (error?.response?.status === 401) {
-        logout();
-      }
-    },
   });
 }

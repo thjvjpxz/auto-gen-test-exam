@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,18 +51,15 @@ export default function RegisterPage() {
     defaultValues: FORM_DEFAULT_VALUES,
   });
 
-  const formRef = useRef(form);
-  formRef.current = form;
-
   const onSubmit = useCallback(
     (data: RegisterFormData) => {
       registerMutation.mutate(data, {
         onError: (error) => {
-          setFormValidationErrors(formRef.current, error);
+          setFormValidationErrors(form, error);
         },
       });
     },
-    [registerMutation],
+    [registerMutation, form],
   );
 
   const errorMessage = useMemo(() => {
@@ -173,7 +170,7 @@ export default function RegisterPage() {
                         </div>
                       </FormControl>
                       <FormDescription>
-                        Tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường và số
+                        Tối thiểu 8 ký tự, bao gồm cả chữ và số
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

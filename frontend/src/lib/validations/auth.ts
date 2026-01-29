@@ -17,8 +17,7 @@ export const registerSchema = z
     name: z
       .string()
       .min(1, "Họ tên không được để trống")
-      .min(1, "Họ tên phải có ít nhất 1 ký tự")
-      .max(255, "Họ tên không được vượt quá 255 ký tự"), 
+      .max(255, "Họ tên không được vượt quá 255 ký tự"),
     email: z
       .string()
       .min(1, "Email không được để trống")

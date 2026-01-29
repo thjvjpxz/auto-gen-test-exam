@@ -1,5 +1,5 @@
 import type { AxiosError } from "axios";
-import type { FieldValues, Path } from "react-hook-form";
+import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
 import type { HTTPValidationError, ValidationError } from "@/types";
 
 /**
@@ -58,9 +58,7 @@ function extractFieldName(loc: (string | number)[]): string | null {
  * @param error - Error object from API call
  */
 export function setFormValidationErrors<TFieldValues extends FieldValues>(
-  form: {
-    setError: (name: Path<TFieldValues>, error: { message: string }) => void;
-  },
+  form: UseFormReturn<TFieldValues>,
   error: unknown,
 ): void {
   const validationErrors = extractValidationErrors(error);

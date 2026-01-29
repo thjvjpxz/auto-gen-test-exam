@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,18 +47,15 @@ export default function LoginPage() {
     defaultValues: FORM_DEFAULT_VALUES,
   });
 
-  const formRef = useRef(form);
-  formRef.current = form;
-
   const onSubmit = useCallback(
     (data: LoginFormData) => {
       loginMutation.mutate(data, {
         onError: (error) => {
-          setFormValidationErrors(formRef.current, error);
+          setFormValidationErrors(form, error);
         },
       });
     },
-    [loginMutation],
+    [loginMutation, form],
   );
 
   const errorMessage = useMemo(() => {

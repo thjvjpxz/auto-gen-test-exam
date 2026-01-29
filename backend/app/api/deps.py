@@ -43,6 +43,13 @@ async def get_current_user(
 ) -> User:
     token = _extract_token(authorization)
     payload = decode_access_token(token)
+
+    if payload is None or "sub" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không hợp lệ hoặc đã hết hạn",
+        )
+
     user_id = payload["sub"]
 
     stmt = select(User).where(User.id == int(user_id))

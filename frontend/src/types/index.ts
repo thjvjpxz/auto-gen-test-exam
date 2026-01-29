@@ -155,17 +155,14 @@ export interface ExamAttempt {
   userAgent?: string;
 }
 
-// TokenResponse từ OpenAPI spec (backend response)
+// TokenResponse
 export interface TokenResponse {
   access_token: string;
   token_type: string;
   user: UserOut;
 }
 
-// AuthResponse alias để backward compatibility
-export interface AuthResponse extends TokenResponse {
-  user: User;
-}
+export type AuthResponse = TokenResponse;
 
 // Request types từ OpenAPI spec
 export interface LoginRequest {
