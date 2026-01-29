@@ -8,6 +8,36 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   logout: () => void;
+  clearAuth: () => void;
+  getToken: () => string | null;
+}
+
+let tokenCache: string | null = null;
+let tokenCacheTime: number = 0;
+const CACHE_DURATION = 1000;
+
+function getCachedToken(): string | null {
+  if (typeof window === "undefined") return null;
+
+  const now = Date.now();
+  if (tokenCache !== null && now - tokenCacheTime < CACHE_DURATION) {
+    return tokenCache;
+  }
+
+  tokenCache = localStorage.getItem("access_token");
+  tokenCacheTime = now;
+  return tokenCache;
+}
+
+function setCachedToken(token: string | null): void {
+  tokenCache = token;
+  tokenCacheTime = Date.now();
+
+  if (token) {
+    localStorage.setItem("access_token", token);
+  } else {
+    localStorage.removeItem("access_token");
+  }
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -23,15 +53,18 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       setToken: (token) => {
-        if (token) {
-          localStorage.setItem("access_token", token);
-        } else {
-          localStorage.removeItem("access_token");
-        }
+        setCachedToken(token);
       },
 
+      getToken: () => getCachedToken(),
+
       logout: () => {
-        localStorage.removeItem("access_token");
+        setCachedToken(null);
+        set({ user: null, isAuthenticated: false });
+      },
+
+      clearAuth: () => {
+        setCachedToken(null);
         set({ user: null, isAuthenticated: false });
       },
     }),

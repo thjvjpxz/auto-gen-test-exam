@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Mail, Lock, GraduationCap } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Mail } from "lucide-react";
+import { Lock } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -26,46 +27,53 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
-import { authService } from "@/services/auth";
-import { useAuthStore } from "@/stores/auth";
+import { useLogin } from "@/hooks/auth";
+import {
+  extractErrorMessage,
+  extractValidationErrors,
+  setFormValidationErrors,
+} from "@/lib/errors";
 import { env } from "@/config/env";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const { setUser, setToken } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const FORM_DEFAULT_VALUES: LoginFormData = {
+  email: "",
+  password: "",
+};
 
+export default function LoginPage() {
+  const loginMutation = useLogin();
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: FORM_DEFAULT_VALUES,
   });
 
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    setError(null);
+  const formRef = useRef(form);
+  formRef.current = form;
 
-    try {
-      const response = await authService.login(data);
-      setToken(response.access_token);
-      setUser(response.user);
+  const onSubmit = useCallback(
+    (data: LoginFormData) => {
+      loginMutation.mutate(data, {
+        onError: (error) => {
+          setFormValidationErrors(formRef.current, error);
+        },
+      });
+    },
+    [loginMutation],
+  );
 
-      if (response.user.role === "teacher") {
-        router.push("/dashboard/teacher");
-      } else {
-        router.push("/dashboard/student");
-      }
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail || "Đăng nhập thất bại. Vui lòng thử lại.";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+  const errorMessage = useMemo(() => {
+    if (!loginMutation.error) return null;
+    const validationErrors = extractValidationErrors(loginMutation.error);
+    if (validationErrors && validationErrors.length > 0) {
+      return null;
     }
-  };
+    return extractErrorMessage(
+      loginMutation.error,
+      "Đăng nhập thất bại. Vui lòng thử lại.",
+    );
+  }, [loginMutation.error]);
+
+  const isPending = loginMutation.isPending;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
@@ -90,11 +98,11 @@ export default function LoginPage() {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-4"
               >
-                {error && (
+                {errorMessage ? (
                   <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-                    {error}
+                    {errorMessage}
                   </div>
-                )}
+                ) : null}
 
                 <FormField
                   control={form.control}
@@ -109,7 +117,7 @@ export default function LoginPage() {
                             type="email"
                             placeholder="name@example.com"
                             className="pl-9"
-                            disabled={isLoading}
+                            disabled={isPending}
                             {...field}
                           />
                         </div>
@@ -132,7 +140,7 @@ export default function LoginPage() {
                             type="password"
                             placeholder="••••••••"
                             className="pl-9"
-                            disabled={isLoading}
+                            disabled={isPending}
                             {...field}
                           />
                         </div>
@@ -145,10 +153,10 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isPending}
                   size="lg"
                 >
-                  {isLoading ? (
+                  {isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Đang xử lý...
