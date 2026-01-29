@@ -1,9 +1,13 @@
 import enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.exam import Exam
 
 
 class UserRole(str, enum.Enum):
@@ -25,4 +29,11 @@ class User(Base, TimestampMixin):
         nullable=False,
     )
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    # Relationships
+    exams: Mapped[list["Exam"]] = relationship(
+        "Exam",
+        back_populates="creator",
+        cascade="all, delete-orphan",
+    )
 
