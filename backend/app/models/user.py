@@ -1,18 +1,17 @@
 import enum
 
-from sqlalchemy import DateTime, Enum, Integer, String, Text
+from sqlalchemy import Enum, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.sql import func
 
-from app.db.base import Base
+from app.db.base import Base, TimestampMixin
 
 
 class UserRole(str, enum.Enum):
-    TEACHER = "teacher"
-    STUDENT = "student"
+    USER = "user"
+    ADMIN = "admin"
 
 
-class User(Base):
+class User(Base, TimestampMixin):
     """Model user ứng với bảng users."""
 
     __tablename__ = "users"
@@ -26,13 +25,4 @@ class User(Base):
         nullable=False,
     )
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-    )
-    updated_at: Mapped[DateTime | None] = mapped_column(
-        DateTime(timezone=True),
-        onupdate=func.now(),
-        nullable=True,
-    )
 

@@ -26,9 +26,8 @@ class UserOut(BaseModel):
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=8, max_length=255)
     name: str = Field(min_length=1, max_length=255)
-    role: UserRole
 
     @field_validator("password")
     @classmethod
@@ -68,8 +67,6 @@ async def register_user(
     data: RegisterRequest,
     db: DbSessionDep,
 ) -> Any:
-    """Đăng ký user mới với vai trò teacher hoặc student."""
-
     existing = await _get_user_by_email(db=db, email=data.email)
     if existing is not None:
         raise HTTPException(
@@ -81,7 +78,7 @@ async def register_user(
         email=data.email,
         name=data.name,
         password_hash=hash_password(data.password),
-        role=data.role,
+        role=UserRole.USER,
     )
 
     db.add(user)
@@ -146,4 +143,3 @@ async def get_me(
     """Trả về thông tin user hiện tại dựa trên access token."""
 
     return UserOut.model_validate(current_user)
-

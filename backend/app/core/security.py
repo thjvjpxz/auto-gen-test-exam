@@ -7,18 +7,16 @@ from passlib.context import CryptContext
 from .config import get_settings
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt_sha256"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    """Băm mật khẩu bằng bcrypt."""
-
+    """Băm mật khẩu bằng bcrypt_sha256"""
     return pwd_context.hash(password)
 
 
 def verify_password(password: str, password_hash: str) -> bool:
     """So sánh mật khẩu plain text với hash đã lưu."""
-
     return pwd_context.verify(password, password_hash)
 
 
@@ -66,4 +64,3 @@ def decode_access_token(token: str) -> Dict[str, Any] | None:
         return payload
     except JWTError:
         return None
-

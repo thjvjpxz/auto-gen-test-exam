@@ -13,15 +13,7 @@ DbSessionDep = Annotated[AsyncSession, Depends(get_db)]
 AuthorizationHeader = Annotated[str | None, Header(alias="Authorization")]
 
 
-def get_current_user_token(
-    authorization: AuthorizationHeader = None,
-) -> str:
-    """
-    Trích xuất bearer token từ header Authorization.
-
-    Chưa ánh xạ sang thực thể user, chỉ validate token cơ bản.
-    """
-
+def _extract_token(authorization: str | None) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -39,22 +31,19 @@ def get_current_user_token(
     return token
 
 
+def get_current_user_token(
+    authorization: AuthorizationHeader = None,
+) -> str:
+    return _extract_token(authorization)
+
+
 async def get_current_user(
     db: DbSessionDep,
     authorization: AuthorizationHeader = None,
 ) -> User:
-    """
-    Lấy thông tin user hiện tại từ access token trong Authorization header.
-    """
-
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Thiếu hoặc sai định dạng Authorization header",
-        )
-
-    token = authorization.removeprefix("Bearer ").strip()
+    token = _extract_token(authorization)
     payload = decode_access_token(token)
+
     if payload is None or "sub" not in payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -66,6 +55,7 @@ async def get_current_user(
     stmt = select(User).where(User.id == int(user_id))
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
+
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -14,8 +14,6 @@ settings = get_settings()
 
 
 def _build_engine() -> AsyncEngine:
-    """Tạo SQLAlchemy AsyncEngine từ DATABASE_URL."""
-
     return create_async_engine(
         settings.database_url,
         echo=settings.debug,
@@ -33,8 +31,11 @@ SessionLocal = async_sessionmaker(
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
-    """Dependency FastAPI trả về session async."""
-
     async with SessionLocal() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
 

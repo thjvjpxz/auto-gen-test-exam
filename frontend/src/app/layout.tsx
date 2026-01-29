@@ -1,30 +1,31 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import { Providers } from '@/providers'
-import './globals.css'
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { Providers } from "@/providers";
+import "./globals.css";
 
 const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
 const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: {
-    default: 'Hệ Thống Thi CNTT Online',
-    template: '%s | Hệ Thống Thi CNTT Online',
+    default: "Hệ Thống Thi CNTT Online",
+    template: "%s | Hệ Thống Thi CNTT Online",
   },
-  description: 'Hệ thống thi trắc nghiệm và tự luận CNTT với AI tự động sinh đề và chấm điểm',
-}
+  description:
+    "Hệ thống thi trắc nghiệm và tự luận CNTT với AI tự động sinh đề và chấm điểm",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
@@ -34,5 +35,5 @@ export default function RootLayout({
         <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }

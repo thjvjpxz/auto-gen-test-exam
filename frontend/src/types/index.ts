@@ -1,4 +1,4 @@
-export type UserRole = "teacher" | "student";
+export type UserRole = "user" | "admin";
 
 export type ExamType = "sql_testing" | "sql_only" | "testing_only";
 
@@ -13,13 +13,23 @@ export type ViolationType =
   | "mouse_leave"
   | "window_blur";
 
+// UserOut từ OpenAPI spec (backend response)
+export interface UserOut {
+  id: number;
+  email: string;
+  name: string;
+  role: UserRole;
+  avatar_url: string | null;
+}
+
+// User interface cho frontend (có thể extend từ UserOut)
 export interface User {
   id: number;
   email: string;
   name: string;
   role: UserRole;
   avatarUrl?: string;
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -145,14 +155,42 @@ export interface ExamAttempt {
   userAgent?: string;
 }
 
-export interface AuthResponse {
+// TokenResponse
+export interface TokenResponse {
   access_token: string;
   token_type: string;
-  user: User;
+  user: UserOut;
+}
+
+export type AuthResponse = TokenResponse;
+
+// Request types từ OpenAPI spec
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
+// Error types
+export interface ValidationError {
+  loc: (string | number)[];
+  msg: string;
+  type: string;
+  input?: unknown;
+  ctx?: Record<string, unknown>;
+}
+
+export interface HTTPValidationError {
+  detail: ValidationError[] | string;
 }
 
 export interface ApiError {
-  detail: string;
+  detail: string | ValidationError[];
   statusCode?: number;
 }
 
@@ -187,5 +225,4 @@ export interface RegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  role: UserRole;
 }
