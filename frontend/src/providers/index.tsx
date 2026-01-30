@@ -22,7 +22,7 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryProvider>
-      <ThemeProvider defaultTheme="system" storageKey="exam-app-theme">
+      <ThemeProvider defaultTheme="light" storageKey="exam-app-theme">
         {children}
         {mounted && <Toaster position="top-center" richColors />}
       </ThemeProvider>

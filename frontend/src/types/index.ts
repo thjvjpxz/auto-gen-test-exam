@@ -4,6 +4,8 @@ export type ExamType = "sql_testing" | "sql_only" | "testing_only";
 
 export type ExamAttemptStatus = "in_progress" | "submitted" | "graded";
 
+export type TaskStatus = "pending" | "completed" | "failed";
+
 export type ViolationType =
   | "tab_switch"
   | "copy"
@@ -203,16 +205,94 @@ export interface PaginatedResponse<T> {
 }
 
 export interface ExamGenerateRequest {
-  examType: ExamType;
-  customDomain?: string;
-  difficulty?: "basic" | "intermediate" | "advanced";
+  exam_type?: ExamType;
+  duration?: number;
+  passing_score?: number;
+  subject?: string | null;
 }
 
-export interface TaskStatus {
-  taskId: string;
-  status: "pending" | "processing" | "completed" | "failed";
-  result?: Exam;
+export interface GenerationTaskResponse {
+  task_id: string;
+  status: TaskStatus;
+}
+
+export interface RuleTableItem {
+  condition: string;
+  result: string;
+}
+
+export interface ExamSQLPart {
+  mermaid_code: string;
+  questions: string[];
+}
+
+export interface ExamTestingPart {
+  scenario: string;
+  rules_table: RuleTableItem[];
+  question: string;
+}
+
+export interface ExamData {
+  sql_part?: ExamSQLPart;
+  testing_part?: ExamTestingPart;
+}
+
+export interface ExamSettings {
+  allow_review?: boolean;
+  show_sample_solution?: boolean;
+  max_attempts?: number;
+}
+
+export interface ExamOut {
+  id: number;
+  title: string;
+  exam_type: ExamType;
+  subject: string | null;
+  created_by: number;
+  duration: number;
+  passing_score: number;
+  exam_data: ExamData;
+  ai_generated: boolean;
+  gemini_model: string;
+  settings: ExamSettings | null;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface ExamListItem {
+  id: number;
+  title: string;
+  exam_type: ExamType;
+  subject: string | null;
+  created_by: number;
+  duration: number;
+  passing_score: number;
+  ai_generated: boolean;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface ExamListResponse {
+  items: ExamListItem[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+export interface GenerationStatusResponse {
+  status: TaskStatus;
+  progress?: number;
+  exam_id?: number;
+  exam?: ExamOut;
   error?: string;
+}
+
+export interface ExamListParams {
+  skip?: number;
+  limit?: number;
+  exam_type?: ExamType;
+  is_published?: boolean;
 }
 
 export interface LoginFormData {
@@ -225,4 +305,11 @@ export interface RegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
+}
+
+export interface ExamGenerateFormData {
+  exam_type: ExamType;
+  duration: number;
+  passing_score: number;
+  subject?: string;
 }

@@ -52,7 +52,7 @@ export function useLogin() {
       });
 
       const dashboardPath =
-        response.user.role === "admin" ? "/dashboard/admin" : "/dashboard";
+        response.user.role === "admin" ? "/admin" : "/dashboard";
       router.push(dashboardPath);
     },
   });
