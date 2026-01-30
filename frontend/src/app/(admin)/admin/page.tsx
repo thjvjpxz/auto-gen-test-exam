@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, PlusCircle, Users, TrendingUp } from "lucide-react";
+import { FileText, PlusCircle, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

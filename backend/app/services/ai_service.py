@@ -12,6 +12,7 @@ from google import genai
 from google.genai import types
 
 from app.core.config import get_settings
+from app.models.exam import ExamType
 
 # Constants
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
@@ -114,6 +115,73 @@ Yêu cầu:
 - Các con số trong bài Testing PHẢI nhất quán và tính toán được
 """
 
+# SQL-only prompt - generates only SQL part
+SQL_ONLY_PROMPT = """
+Bạn là một chuyên gia soạn đề thi CNTT với 20 năm kinh nghiệm. Nhiệm vụ: tạo đề thi SQL hoàn toàn MỚI và KHÁC BIỆT.
+
+## PHẦN SQL - Sơ đồ ERD và Truy vấn
+
+**Bước 1: Chọn NGẪU NHIÊN một lĩnh vực từ các nhóm:**
+- Thương mại, Giáo dục, Y tế, Dịch vụ, Tài chính, Vận tải, Giải trí, Bất động sản, Nhân sự, Nông nghiệp
+
+**Bước 2: Thiết kế ERD (4-6 bảng) với các quy tắc:**
+- Mỗi bảng có 3-6 thuộc tính thực tế
+- Bắt buộc có ít nhất: 1 quan hệ 1-n và 1 quan hệ n-n thông qua bảng trung gian
+
+**Bước 3: Tạo 2-3 câu hỏi SQL với độ khó đa dạng:**
+- Từ cơ bản (SELECT-WHERE, ORDER BY) đến nâng cao (Subquery, JOIN, Window Functions)
+
+## OUTPUT FORMAT (JSON)
+
+{
+  "exam_title": "string - Tiêu đề cụ thể",
+  "sql_part": {
+    "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh",
+    "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
+  },
+  "testing_part": null
+}
+
+**LƯU Ý:** Mermaid code PHẢI là cú pháp hợp lệ, có thể render được.
+"""
+
+# Testing-only prompt - generates only Testing part
+TESTING_ONLY_PROMPT = """
+Bạn là một chuyên gia soạn đề thi CNTT với 20 năm kinh nghiệm. Nhiệm vụ: tạo đề thi Kiểm thử phần mềm hoàn toàn MỚI.
+
+## PHẦN TESTING - Kỹ thuật kiểm thử hộp đen
+
+**Bước 1: Chọn NGẪU NHIÊN một loại bài toán:**
+- Phân loại theo điều kiện số: Phân vùng tương đương (EP) + Giá trị biên (BVA)
+- Kết hợp nhiều điều kiện: Bảng quyết định (Decision Table)
+- Quy trình có trạng thái: Chuyển đổi trạng thái (State Transition)
+
+**Bước 2: Thiết kế bài toán với:**
+- Mô tả ngữ cảnh nghiệp vụ rõ ràng (30-50 từ)
+- Bảng quy tắc (3-6 rules) hoặc sơ đồ trạng thái
+- Có số liệu cụ thể, thực tế (VND, km)
+
+**Bước 3: Câu hỏi yêu cầu thí sinh:**
+- Xác định kỹ thuật kiểm thử phù hợp và giải thích lý do
+- Thiết kế tối thiểu 5-10 test cases
+
+## OUTPUT FORMAT (JSON)
+
+{
+  "exam_title": "string - Tiêu đề cụ thể",
+  "sql_part": null,
+  "testing_part": {
+    "scenario": "string - Mô tả tình huống nghiệp vụ chi tiết",
+    "rules_table": [
+      {"condition": "string - Điều kiện", "result": "string - Kết quả"}
+    ],
+    "question": "string - Yêu cầu cụ thể cho thí sinh"
+  }
+}
+
+**LƯU Ý:** Các con số trong bài Testing PHẢI nhất quán và tính toán được.
+"""
+
 
 class ExamGeneratorService:
     """Async service for generating exam content using Google Gemini AI.
@@ -122,12 +190,18 @@ class ExamGeneratorService:
     for FastAPI background tasks and non-blocking operations.
     """
 
-    def __init__(self, model_name: str = DEFAULT_GEMINI_MODEL):
+    def __init__(
+        self,
+        model_name: str = DEFAULT_GEMINI_MODEL,
+        exam_type: ExamType = ExamType.SQL_TESTING,
+    ):
         """Initialize the ExamGeneratorService with Google GenAI client.
         
         Args:
             model_name: The Gemini model identifier to use for generation.
                        Defaults to "gemini-2.5-flash-lite".
+            exam_type: Type of exam to generate (sql_testing, sql_only, testing_only).
+                       Defaults to SQL_TESTING.
                        
         Raises:
             ValueError: If GEMINI_API_KEY is not configured.
@@ -139,6 +213,20 @@ class ExamGeneratorService:
         
         self.client = genai.Client(api_key=settings.gemini_api_key)
         self.model_name = model_name
+        self.exam_type = exam_type
+
+    def _get_prompt_for_exam_type(self) -> str:
+        """Get the appropriate prompt based on exam type.
+        
+        Returns:
+            The prompt string for the configured exam type.
+        """
+        if self.exam_type == ExamType.SQL_ONLY:
+            return SQL_ONLY_PROMPT
+        elif self.exam_type == ExamType.TESTING_ONLY:
+            return TESTING_ONLY_PROMPT
+        else:
+            return MASTER_PROMPT
 
     async def generate_exam(self) -> dict[str, Any]:
         """Generate a complete exam with SQL and Testing sections asynchronously.
@@ -187,9 +275,10 @@ class ExamGeneratorService:
         Returns:
             Response object from Gemini API.
         """
+        prompt = self._get_prompt_for_exam_type()
         return self.client.models.generate_content(
             model=self.model_name,
-            contents=MASTER_PROMPT,
+            contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=GENERATION_TEMPERATURE
@@ -199,32 +288,45 @@ class ExamGeneratorService:
     def _validate_exam_structure(self, exam_data: dict[str, Any]) -> None:
         """Validate that the generated exam has the required structure.
         
+        Validation rules depend on exam_type:
+        - sql_testing: requires both sql_part and testing_part
+        - sql_only: requires only sql_part (testing_part can be null)
+        - testing_only: requires only testing_part (sql_part can be null)
+        
         Args:
             exam_data: The exam dictionary to validate.
             
         Raises:
             ValueError: If required keys are missing from the structure.
         """
-        required_keys = ['exam_title', 'sql_part', 'testing_part']
-        missing_keys = [key for key in required_keys if key not in exam_data]
+        if 'exam_title' not in exam_data:
+            raise ValueError("Missing 'exam_title' in exam data")
         
-        if missing_keys:
-            raise ValueError(f"Missing required keys in exam data: {missing_keys}")
+        # Determine required parts based on exam_type
+        requires_sql = self.exam_type in (ExamType.SQL_TESTING, ExamType.SQL_ONLY)
+        requires_testing = self.exam_type in (ExamType.SQL_TESTING, ExamType.TESTING_ONLY)
         
-        # Validate sql_part structure
-        if 'mermaid_code' not in exam_data['sql_part']:
-            raise ValueError("Missing 'mermaid_code' in sql_part")
-        if 'questions' not in exam_data['sql_part']:
-            raise ValueError("Missing 'questions' in sql_part")
+        # Validate sql_part if required
+        if requires_sql:
+            sql_part = exam_data.get('sql_part')
+            if sql_part is None:
+                raise ValueError("Missing 'sql_part' for exam_type requiring SQL")
+            if 'mermaid_code' not in sql_part:
+                raise ValueError("Missing 'mermaid_code' in sql_part")
+            if 'questions' not in sql_part:
+                raise ValueError("Missing 'questions' in sql_part")
         
-        # Validate testing_part structure
-        testing_required = ['scenario', 'rules_table', 'question']
-        testing_missing = [
-            key for key in testing_required
-            if key not in exam_data['testing_part']
-        ]
-        
-        if testing_missing:
-            raise ValueError(
-                f"Missing required keys in testing_part: {testing_missing}"
-            )
+        # Validate testing_part if required
+        if requires_testing:
+            testing_part = exam_data.get('testing_part')
+            if testing_part is None:
+                raise ValueError("Missing 'testing_part' for exam_type requiring Testing")
+            testing_required = ['scenario', 'rules_table', 'question']
+            testing_missing = [
+                key for key in testing_required
+                if key not in testing_part
+            ]
+            if testing_missing:
+                raise ValueError(
+                    f"Missing required keys in testing_part: {testing_missing}"
+                )

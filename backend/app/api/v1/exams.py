@@ -1,11 +1,10 @@
 """Exam API endpoints for generation, retrieval, and management."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DbSessionDep, get_current_user
 from app.db.session import SessionLocal
@@ -113,7 +112,7 @@ async def get_generation_status(
         GenerationStatusResponse với status, exam_id (nếu completed), hoặc error.
         
     Raises:
-        HTTPException: Nếu task_id không tồn tại.
+        HTTPException: Nếu task_id không tồn tại hoặc user không có quyền.
     """
     task_status = TaskManager.get_task_status(task_id)
     
@@ -122,6 +121,13 @@ async def get_generation_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task không tồn tại hoặc đã bị xóa",
         )
+    
+    if current_user.role != UserRole.ADMIN:
+        if not TaskManager.verify_task_ownership(task_id, current_user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không có quyền xem task này",
+            )
     
     response_data: dict[str, Any] = {
         "status": task_status["status"],
@@ -168,7 +174,7 @@ async def get_exam(
         ExamOut với đầy đủ thông tin đề thi.
         
     Raises:
-        HTTPException: Nếu đề thi không tồn tại.
+        HTTPException: Nếu đề thi không tồn tại hoặc user không có quyền xem.
     """
     stmt = select(Exam).where(Exam.id == exam_id)
     result = await db.execute(stmt)
@@ -178,6 +184,12 @@ async def get_exam(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Đề thi không tồn tại",
+        )
+    
+    if current_user.role != UserRole.ADMIN and not exam.is_published:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Đề thi chưa được xuất bản",
         )
     
     return ExamOut.from_orm_exam(exam)
@@ -311,8 +323,44 @@ async def update_exam(
     
     # Update updated_at timestamp if there were changes
     if has_changes:
-        exam.updated_at = datetime.utcnow()
+        exam.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(exam)
     
     return ExamOut.from_orm_exam(exam)
+
+
+@router.delete(
+    "/{exam_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Xóa đề thi (Admin only)",
+)
+async def delete_exam(
+    exam_id: Annotated[int, Path(gt=0, description="ID của đề thi cần xóa")],
+    db: DbSessionDep,
+    current_user: Annotated[User, Depends(require_admin)],
+) -> None:
+    """Xóa một đề thi khỏi hệ thống.
+    
+    Chỉ admin mới có quyền xóa đề thi.
+    
+    Args:
+        exam_id: ID của đề thi cần xóa.
+        db: Database session.
+        current_user: Admin user đã xác thực.
+        
+    Raises:
+        HTTPException: Nếu đề thi không tồn tại.
+    """
+    stmt = select(Exam).where(Exam.id == exam_id)
+    result = await db.execute(stmt)
+    exam = result.scalar_one_or_none()
+    
+    if exam is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Đề thi không tồn tại",
+        )
+    
+    await db.delete(exam)
+    await db.commit()

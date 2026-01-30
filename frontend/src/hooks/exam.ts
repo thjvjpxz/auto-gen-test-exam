@@ -24,6 +24,7 @@ export function useExamGeneration() {
   const [error, setError] = useState<string | null>(null);
   const pollCountRef = useRef(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
   const stopPolling = useCallback(() => {
     if (pollIntervalRef.current) {
@@ -32,48 +33,63 @@ export function useExamGeneration() {
     }
   }, []);
 
-  const startGeneration = useCallback(
-    async (data: ExamGenerateFormData) => {
-      try {
-        setIsGenerating(true);
-        setError(null);
-        setStatus(null);
-        pollCountRef.current = 0;
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-        const request: ExamGenerateRequest = {
-          exam_type: data.exam_type,
-          duration: data.duration,
-          passing_score: data.passing_score,
-          subject: data.subject || null,
-        };
+  const startGeneration = useCallback(async (data: ExamGenerateFormData) => {
+    try {
+      setIsGenerating(true);
+      setError(null);
+      setStatus(null);
+      pollCountRef.current = 0;
 
-        const result = await examService.generateExam(request);
+      const request: ExamGenerateRequest = {
+        exam_type: data.exam_type,
+        duration: data.duration,
+        passing_score: data.passing_score,
+        subject: data.subject || null,
+      };
+
+      const result = await examService.generateExam(request);
+      if (isMountedRef.current) {
         setTaskId(result.task_id);
-      } catch (err: unknown) {
+      }
+    } catch (err: unknown) {
+      if (isMountedRef.current) {
         const errorMessage =
           err instanceof Error ? err.message : "Không thể bắt đầu sinh đề";
         setError(errorMessage);
         setIsGenerating(false);
       }
-    },
-    []
-  );
+    }
+  }, []);
 
   useEffect(() => {
     if (!taskId) return;
 
     const pollStatus = async () => {
+      if (!isMountedRef.current) return;
+
       try {
         pollCountRef.current += 1;
 
         if (pollCountRef.current > MAX_POLL_ATTEMPTS) {
-          setError("Quá thời gian chờ. Vui lòng thử lại.");
-          setIsGenerating(false);
+          if (isMountedRef.current) {
+            setError("Quá thời gian chờ. Vui lòng thử lại.");
+            setIsGenerating(false);
+          }
           stopPolling();
           return;
         }
 
         const statusData = await examService.getGenerationStatus(taskId);
+
+        if (!isMountedRef.current) return;
+
         setStatus(statusData);
 
         if (statusData.status !== "pending") {
@@ -85,10 +101,14 @@ export function useExamGeneration() {
           }
         }
       } catch (err: unknown) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Không thể kiểm tra trạng thái";
-        setError(errorMessage);
-        setIsGenerating(false);
+        if (isMountedRef.current) {
+          const errorMessage =
+            err instanceof Error
+              ? err.message
+              : "Không thể kiểm tra trạng thái";
+          setError(errorMessage);
+          setIsGenerating(false);
+        }
         stopPolling();
       }
     };

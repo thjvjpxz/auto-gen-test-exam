@@ -304,6 +304,18 @@ export default function GenerateExamPage() {
             </div>
           </div>
 
+          {isGenerating && (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                onClick={reset}
+                className="cursor-pointer"
+              >
+                Hủy bỏ
+              </Button>
+            </div>
+          )}
+
           {isFailed && (
             <div className="flex gap-3">
               <Button

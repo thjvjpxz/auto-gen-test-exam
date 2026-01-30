@@ -1,0 +1,106 @@
+---
+## description: Rule for Cursor/Antigravity to produce clean, maintainable code with minimal smells. Comments are docFunction-only.
+
+# Clean Code Rule — Cursor/Antigravity
+---
+
+## Mục tiêu
+
+* Code **sạch, đẹp, dễ đọc, dễ test, dễ bảo trì**.
+* **Tránh code smell** (dài dòng, lặp, phức tạp, khó test).
+* **Không comment thừa**: chỉ cho phép **docFunction** (docstring/docblock cho function/method). Không có comment giải thích hiển nhiên.
+
+## Nguyên tắc cốt lõi
+
+* Ưu tiên **clarity > cleverness**.
+* **One responsibility**: mỗi function/class làm 1 việc rõ ràng.
+* **Small & composable**: tách nhỏ theo hành vi, không theo “tiện tay”.
+* **Safe changes**: refactor phải giữ hành vi, thêm/sửa test khi cần.
+
+## Quy tắc kiến trúc & cấu trúc
+
+* Tách lớp theo **layer** (UI/Controller ↔ Service/UseCase ↔ Domain ↔ Infra). Không để logic nghiệp vụ dày ở UI.
+* Dependency theo hướng **inward** (Domain không phụ thuộc Infra).
+* Tránh “god class / god service”: nếu một file phình to → tách theo feature hoặc bounded context.
+
+## Quy tắc function/method
+
+* Tên function phải nói rõ **hành động + đối tượng** (verb + noun), không mơ hồ.
+* Một function:
+
+  * Một mục đích.
+  * Ít tham số (ưu tiên ≤ 3). Nếu nhiều hơn → gộp vào object/struct.
+  * Tránh side effects không rõ ràng.
+* Giảm nesting:
+
+  * Ưu tiên **early return / guard clause**.
+  * Tách điều kiện phức tạp thành hàm `isX()/canY()`.
+* Không “magic number/string”: đưa vào constant hoặc cấu hình.
+
+## Quy tắc naming
+
+* Biến/field: danh từ rõ nghĩa, không viết tắt khó đoán.
+* Boolean: `is/has/can/should`.
+* Collection: số nhiều (`users`, `orderItems`).
+* Tránh tên chung chung: `data`, `info`, `tmp`, `result` (trừ phạm vi cực nhỏ và rõ ngữ cảnh).
+
+## Quy tắc tránh code smell (checklist tự review)
+
+* **Duplicate code**: trích xuất hàm/utility.
+* **Long method / large class**: tách theo responsibility.
+* **Complex conditional**: dùng guard clause; tách predicate; dùng polymorphism/strategy nếu nhiều nhánh theo type.
+* **Feature envy**: logic thuộc về object nào thì đặt ở đó.
+* **Primitive obsession**: tạo value object cho email, money, date-range, status…
+* **Hidden side effects**: rõ ràng hóa IO (DB/HTTP/File) và boundary.
+* **Shotgun surgery**: nếu sửa 1 yêu cầu mà phải sửa nhiều nơi → tái cấu trúc API/boundary.
+* **Inappropriate intimacy**: giảm truy cập nội bộ; dùng interface/DTO.
+* **Dead code / commented-out code**: xoá.
+
+## Error handling
+
+* Fail fast với input invalid.
+* Exception/error message phải **actionable** (nói rõ input nào sai).
+* Không nuốt lỗi im lặng. Nếu cần fallback → log/telemetry đúng mức.
+
+## Format & style
+
+* Tuân thủ formatter/linter của repo.
+* Không để warning trên UI/console nếu có thể tránh.
+* Giữ diff gọn: tránh đổi format hàng loạt nếu không cần.
+
+## Test & quality gate
+
+* Khi sửa bug: **thêm test tái hiện bug** trước hoặc cùng lúc.
+* Khi refactor: test phải xanh; không đổi hành vi.
+* Nếu có static analysis (typecheck/lint) → phải pass.
+
+## Policy về comment (BẮT BUỘC)
+
+### ✅ Chỉ cho phép: docFunction
+
+* Mọi function/method **public/protected** phải có docFunction.
+* Function/method private: chỉ docFunction khi có logic khó hiểu hoặc là phần API nội bộ quan trọng.
+
+### ❌ Cấm
+
+* Inline comment giải thích code hiển nhiên.
+* Comment “kể chuyện” (tại sao viết như vậy) — thay bằng tên hàm/biến tốt hoặc tách hàm.
+* Comment-out code, TODO bừa bãi.
+
+### Mẫu docFunction tối thiểu
+
+* Mô tả 1 dòng: làm gì, đầu vào/đầu ra.
+* Params/Returns/Throws (nếu ngôn ngữ hỗ trợ).
+
+**Template (generic):**
+
+* Summary: `What it does (in one sentence).`
+* `@param` / `@returns` / `@throws` (hoặc docstring tương đương).
+
+## Quy trình bắt buộc khi Cursor/Antigravity implement
+
+1. **Plan ngắn**: nêu thay đổi, file liên quan, rủi ro.
+2. Implement theo rule.
+3. **Self-review** với checklist smell + comment policy.
+4. Chỉ giữ lại docFunction; xoá comment thừa.
+5. Đảm bảo build/test/lint pass (nếu repo có).

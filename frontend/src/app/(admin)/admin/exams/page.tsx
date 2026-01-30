@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   PlusCircle,
-  Search,
   Filter,
   MoreHorizontal,
   Eye,
@@ -64,7 +63,7 @@ export default function ExamListPage() {
     limit: ITEMS_PER_PAGE,
   });
 
-  const { data, isLoading, refetch } = useExams(filters);
+  const { data, isLoading } = useExams(filters);
   const publishMutation = usePublishExam();
   const unpublishMutation = useUnpublishExam();
   const deleteMutation = useDeleteExam();

@@ -14,11 +14,14 @@ interface MermaidRendererProps {
 mermaid.initialize({
   startOnLoad: false,
   theme: "neutral",
-  securityLevel: "loose",
+  securityLevel: "strict",
   fontFamily: "Source Sans 3, sans-serif",
 });
 
-export function MermaidRenderer({ chart, className = "" }: MermaidRendererProps) {
+export function MermaidRenderer({
+  chart,
+  className = "",
+}: MermaidRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +36,7 @@ export function MermaidRenderer({ chart, className = "" }: MermaidRendererProps)
       try {
         const id = `mermaid-${Math.random().toString(36).substring(7)}`;
         const { svg } = await mermaid.render(id, chart);
-        
+
         if (containerRef.current) {
           containerRef.current.innerHTML = svg;
         }

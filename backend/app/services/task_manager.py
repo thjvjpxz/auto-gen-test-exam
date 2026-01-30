@@ -6,14 +6,12 @@ tracking the status of async exam generation operations.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.exam import Exam, ExamType
+from app.models.exam import Exam
 from app.schemas.exam import ExamGenerateRequest
 from app.services.ai_service import ExamGeneratorService
 
@@ -71,10 +69,10 @@ class TaskManager:
             request: Exam generation request parameters.
             db_session_factory: Database session factory for creating new sessions.
         """
-        # Initialize task status
         cls._tasks[task_id] = {
             "status": TaskStatus.PENDING,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
+            "user_id": user_id,
             "exam_id": None,
             "error": None,
             "progress": 0,
@@ -111,8 +109,8 @@ class TaskManager:
             logger.info(f"Starting exam generation task {task_id}")
             cls._update_progress(task_id, PROGRESS_INIT)
 
-            # Initialize AI service
-            generator = ExamGeneratorService()
+            # Initialize AI service with exam_type from request
+            generator = ExamGeneratorService(exam_type=request.exam_type)
             cls._update_progress(task_id, PROGRESS_AI_READY)
 
             # Generate exam content with AI
@@ -155,7 +153,7 @@ class TaskManager:
             cls._tasks[task_id].update({
                 "status": TaskStatus.COMPLETED,
                 "exam_id": exam_id,
-                "completed_at": datetime.utcnow(),
+                "completed_at": datetime.now(timezone.utc),
                 "progress": PROGRESS_DONE,
             })
 
@@ -168,7 +166,7 @@ class TaskManager:
             cls._tasks[task_id].update({
                 "status": TaskStatus.FAILED,
                 "error": str(e),
-                "failed_at": datetime.utcnow(),
+                "failed_at": datetime.now(timezone.utc),
             })
 
         finally:
@@ -200,6 +198,22 @@ class TaskManager:
         return cls._tasks.get(task_id)
 
     @classmethod
+    def verify_task_ownership(cls, task_id: str, user_id: int) -> bool:
+        """Verify if a user owns a specific task.
+        
+        Args:
+            task_id: Task identifier.
+            user_id: User ID to verify ownership.
+            
+        Returns:
+            True if user owns the task, False otherwise.
+        """
+        task = cls._tasks.get(task_id)
+        if task is None:
+            return False
+        return task.get("user_id") == user_id
+
+    @classmethod
     async def cleanup_old_tasks(cls, max_age_seconds: int | None = None) -> int:
         """Remove old completed/failed tasks from memory.
         
@@ -212,7 +226,7 @@ class TaskManager:
         if max_age_seconds is None:
             max_age_seconds = cls._cleanup_interval
 
-        cutoff_time = datetime.utcnow() - timedelta(seconds=max_age_seconds)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=max_age_seconds)
         tasks_to_remove = []
 
         for task_id, task_data in cls._tasks.items():
