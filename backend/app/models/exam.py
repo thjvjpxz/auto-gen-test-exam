@@ -2,7 +2,11 @@
 
 import enum
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.models.attempt import ExamAttempt
+    from app.models.user import User
 
 from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text, TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -102,3 +106,8 @@ class Exam(Base, TimestampMixin):
     
     # Relationships
     creator: Mapped["User"] = relationship("User", back_populates="exams")
+    attempts: Mapped[list["ExamAttempt"]] = relationship(
+        "ExamAttempt",
+        back_populates="exam",
+        cascade="all, delete-orphan",
+    )
