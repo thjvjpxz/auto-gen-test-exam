@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Sparkles, ArrowLeft, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Sparkles,
+  ArrowLeft,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -169,7 +175,9 @@ export default function GenerateExamPage() {
                 </SelectContent>
               </Select>
               {errors.exam_type && (
-                <p className="text-sm text-red-600">{errors.exam_type.message}</p>
+                <p className="text-sm text-red-600">
+                  {errors.exam_type.message}
+                </p>
               )}
             </div>
 
@@ -186,7 +194,9 @@ export default function GenerateExamPage() {
               />
               <p className="text-xs text-slate-500">Từ 30 đến 240 phút</p>
               {errors.duration && (
-                <p className="text-sm text-red-600">{errors.duration.message}</p>
+                <p className="text-sm text-red-600">
+                  {errors.duration.message}
+                </p>
               )}
             </div>
 
@@ -201,7 +211,9 @@ export default function GenerateExamPage() {
                 {...register("passing_score", { valueAsNumber: true })}
                 className="w-full"
               />
-              <p className="text-xs text-slate-500">Phần trăm điểm tối thiểu để đạt</p>
+              <p className="text-xs text-slate-500">
+                Phần trăm điểm tối thiểu để đạt
+              </p>
               {errors.passing_score && (
                 <p className="text-sm text-red-600">
                   {errors.passing_score.message}
@@ -236,7 +248,7 @@ export default function GenerateExamPage() {
             <Button
               type="submit"
               disabled={isGenerating}
-              className="w-full bg-blue-600 hover:bg-blue-700 cursor-pointer"
+              className="w-full bg-primary hover:brightness-95 text-primary-foreground cursor-pointer transition-all"
             >
               {isGenerating ? (
                 <>
@@ -255,8 +267,14 @@ export default function GenerateExamPage() {
       </Card>
 
       {/* Progress Modal */}
-      <Dialog open={isGenerating || isCompleted || isFailed} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+      <Dialog
+        open={isGenerating || isCompleted || isFailed}
+        onOpenChange={() => {}}
+      >
+        <DialogContent
+          className="sm:max-w-md"
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="font-heading flex items-center gap-2">
               {isCompleted ? (
@@ -280,8 +298,8 @@ export default function GenerateExamPage() {
               {isCompleted
                 ? "Đang chuyển đến trang xem đề thi..."
                 : isFailed
-                ? error || "Đã xảy ra lỗi khi sinh đề"
-                : "AI đang tạo đề thi cho bạn. Vui lòng đợi trong giây lát."}
+                  ? error || "Đã xảy ra lỗi khi sinh đề"
+                  : "AI đang tạo đề thi cho bạn. Vui lòng đợi trong giây lát."}
             </DialogDescription>
           </DialogHeader>
 
@@ -295,8 +313,8 @@ export default function GenerateExamPage() {
                 {isCompleted
                   ? "Hoàn tất!"
                   : isFailed
-                  ? "Thất bại"
-                  : getProgressText(progress)}
+                    ? "Thất bại"
+                    : getProgressText(progress)}
               </span>
               <span className="font-medium text-slate-900">
                 {isCompleted ? 100 : isFailed ? 0 : progress}%
@@ -330,7 +348,7 @@ export default function GenerateExamPage() {
                   reset();
                   handleSubmit(onSubmit)();
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                className="flex-1 bg-primary hover:brightness-95 text-primary-foreground cursor-pointer transition-all"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Thử lại

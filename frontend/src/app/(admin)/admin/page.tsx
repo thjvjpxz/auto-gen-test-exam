@@ -43,7 +43,10 @@ export default function AdminDashboard() {
             Tổng quan về hệ thống quản lý đề thi
           </p>
         </div>
-        <Button asChild className="bg-green-600 hover:bg-green-700 cursor-pointer">
+        <Button
+          asChild
+          className="bg-accent hover:brightness-95 text-accent-foreground cursor-pointer transition-all"
+        >
           <Link href="/admin/exams/generate">
             <PlusCircle className="mr-2 h-4 w-4" />
             Sinh đề mới
@@ -84,9 +87,7 @@ export default function AdminDashboard() {
       {/* Recent Exams */}
       <Card className="border-slate-200">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-heading text-lg">
-            Đề thi gần đây
-          </CardTitle>
+          <CardTitle className="font-heading text-lg">Đề thi gần đây</CardTitle>
           <Button variant="outline" asChild className="cursor-pointer">
             <Link href="/admin/exams">Xem tất cả</Link>
           </Button>
@@ -131,8 +132,8 @@ export default function AdminDashboard() {
                       {exam.exam_type === "sql_testing"
                         ? "SQL + Testing"
                         : exam.exam_type === "sql_only"
-                        ? "Chỉ SQL"
-                        : "Chỉ Testing"}{" "}
+                          ? "Chỉ SQL"
+                          : "Chỉ Testing"}{" "}
                       • {exam.duration} phút
                     </p>
                   </div>

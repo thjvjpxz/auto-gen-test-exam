@@ -129,7 +129,7 @@ Bạn là một giáo viên IT với 15 năm kinh nghiệm. Dựa trên kết qu
 - Chi tiết: {testing_details}
 
 **Tổng điểm:** {total_score}/100 ({percentage}%)
-**Kết quả:** {"ĐẠT" if passed else "KHÔNG ĐẠT"}
+**Kết quả:** {passed_status}
 
 ## YÊU CẦU OUTPUT
 
@@ -236,6 +236,8 @@ def build_overall_feedback_prompt(
     Returns:
         Formatted prompt string ready for AI model.
     """
+    passed_status = "ĐẠT" if passed else "KHÔNG ĐẠT"
+    
     return OVERALL_FEEDBACK_PROMPT.format(
         sql_score=sql_score,
         sql_details=sql_details,
@@ -243,5 +245,5 @@ def build_overall_feedback_prompt(
         testing_details=testing_details,
         total_score=total_score,
         percentage=percentage,
-        passed=passed,
+        passed_status=passed_status,
     )
