@@ -74,3 +74,14 @@ export function useLogViolation() {
     },
   });
 }
+
+/**
+ * Gets current user's attempt history.
+ */
+export function useMyAttempts() {
+  return useQuery({
+    queryKey: ["my-attempts"],
+    queryFn: () => attemptService.getMyAttempts(),
+    staleTime: 5 * 60 * 1000,
+  });
+}

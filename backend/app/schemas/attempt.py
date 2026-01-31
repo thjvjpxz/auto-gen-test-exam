@@ -187,3 +187,32 @@ class ViolationLogResponse(BaseModel):
         description="Warning level: none, low, medium, high, critical",
     )
     message: str | None = Field(default=None, description="Warning message to display")
+
+
+class UserAttemptHistoryItem(BaseModel):
+    """Single item in user's attempt history."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(description="Attempt ID")
+    exam_id: int = Field(description="Exam ID")
+    exam_title: str = Field(description="Exam title")
+    exam_type: str = Field(description="Exam type: sql_testing, sql_only, testing_only")
+    status: AttemptStatus = Field(description="Attempt status")
+    score: float = Field(description="Achieved score")
+    max_score: float = Field(description="Maximum possible score")
+    percentage: float | None = Field(description="Score percentage")
+    passed: bool = Field(description="Whether passed the exam")
+    passing_score: int = Field(description="Required passing score percentage")
+    trust_score: int = Field(description="Trust score")
+    started_at: datetime = Field(description="When attempt started")
+    submitted_at: datetime | None = Field(description="When attempt was submitted")
+    time_taken: int | None = Field(description="Time taken in seconds")
+
+
+class UserAttemptHistoryResponse(BaseModel):
+    """Response schema for user's attempt history."""
+
+    items: list[UserAttemptHistoryItem] = Field(description="List of user's attempts")
+    total: int = Field(description="Total number of attempts")
+

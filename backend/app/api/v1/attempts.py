@@ -18,6 +18,8 @@ from app.schemas.attempt import (
     AttemptSaveRequest,
     AttemptStartResponse,
     AttemptSubmitRequest,
+    UserAttemptHistoryItem,
+    UserAttemptHistoryResponse,
     ViolationLogRequest,
     ViolationLogResponse,
 )
@@ -49,6 +51,64 @@ async def require_admin(current_user: CurrentUser) -> User:
             detail="Chỉ admin mới có quyền thực hiện thao tác này",
         )
     return current_user
+
+
+# =============================================================================
+# User Attempt History
+# =============================================================================
+
+
+@router.get(
+    "/attempts/my",
+    response_model=UserAttemptHistoryResponse,
+    summary="Lịch sử làm bài của user",
+)
+async def get_my_attempts(
+    db: DbSessionDep,
+    current_user: CurrentUser,
+) -> UserAttemptHistoryResponse:
+    """Lấy danh sách các lượt làm bài của user hiện tại.
+
+    Chỉ lấy các bài đã nộp (status = GRADED).
+
+    Args:
+        db: Database session.
+        current_user: User đã xác thực.
+
+    Returns:
+        UserAttemptHistoryResponse với danh sách attempts.
+    """
+    stmt = (
+        select(ExamAttempt, Exam)
+        .join(Exam, ExamAttempt.exam_id == Exam.id)
+        .where(ExamAttempt.user_id == current_user.id)
+        .where(ExamAttempt.status == AttemptStatus.GRADED)
+        .order_by(ExamAttempt.submitted_at.desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    items = [
+        UserAttemptHistoryItem(
+            id=attempt.id,
+            exam_id=attempt.exam_id,
+            exam_title=exam.title,
+            exam_type=exam.exam_type.value,
+            status=attempt.status,
+            score=attempt.score,
+            max_score=attempt.max_score,
+            percentage=attempt.percentage,
+            passed=(attempt.percentage or 0) >= exam.passing_score,
+            passing_score=exam.passing_score,
+            trust_score=attempt.trust_score,
+            started_at=attempt.started_at,
+            submitted_at=attempt.submitted_at,
+            time_taken=attempt.time_taken,
+        )
+        for attempt, exam in rows
+    ]
+
+    return UserAttemptHistoryResponse(items=items, total=len(items))
 
 
 @router.post(

@@ -456,3 +456,25 @@ export interface TestingPartGradingResult {
   missing_scenarios?: string[];
   suggestions?: string[];
 }
+
+export interface UserAttemptHistoryItem {
+  id: number;
+  exam_id: number;
+  exam_title: string;
+  exam_type: ExamType;
+  status: ExamAttemptStatus;
+  score: number;
+  max_score: number;
+  percentage: number | null;
+  passed: boolean;
+  passing_score: number;
+  trust_score: number;
+  started_at: string;
+  submitted_at: string | null;
+  time_taken: number | null;
+}
+
+export interface UserAttemptHistoryResponse {
+  items: UserAttemptHistoryItem[];
+  total: number;
+}

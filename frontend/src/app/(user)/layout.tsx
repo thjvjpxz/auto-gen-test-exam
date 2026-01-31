@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, User as UserIcon, FileText } from "lucide-react";
+import { LogOut, User as UserIcon, FileText, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -94,6 +94,13 @@ export default function UserLayout({ children }: UserLayoutProps) {
                     {user?.email}
                   </p>
                 </div>
+                <DropdownMenuSeparator />
+                <Link href="/profile">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <History className="h-4 w-4 mr-2" />
+                    Hồ sơ
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}

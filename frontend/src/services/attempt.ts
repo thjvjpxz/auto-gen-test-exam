@@ -6,6 +6,7 @@ import type {
   ViolationRequest,
   ViolationResponse,
   AnswersPayload,
+  UserAttemptHistoryResponse,
 } from "@/types";
 
 const ATTEMPT_API_BASE = "/v1";
@@ -86,6 +87,17 @@ export const attemptService = {
     const response = await api.post<ViolationResponse>(
       `${ATTEMPT_API_BASE}/attempts/${attemptId}/violations`,
       violation,
+    );
+    return response.data;
+  },
+
+  /**
+   * Gets current user's attempt history.
+   * @returns List of user's completed attempts.
+   */
+  async getMyAttempts(): Promise<UserAttemptHistoryResponse> {
+    const response = await api.get<UserAttemptHistoryResponse>(
+      `${ATTEMPT_API_BASE}/attempts/my`,
     );
     return response.data;
   },
