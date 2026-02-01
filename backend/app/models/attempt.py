@@ -2,13 +2,17 @@
 
 import enum
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
 from app.models.exam import JSONText
+
+if TYPE_CHECKING:
+    from app.models.exam import Exam
+    from app.models.user import User
 
 
 class AttemptStatus(str, enum.Enum):

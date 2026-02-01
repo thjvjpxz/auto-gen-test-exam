@@ -13,11 +13,12 @@ interface FullscreenResult {
  */
 export function useFullscreen(onExit?: () => void): FullscreenResult {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isSupported, setIsSupported] = useState(true);
-
-  useEffect(() => {
-    setIsSupported(!!document.documentElement.requestFullscreen);
-  }, []);
+  const [isSupported, setIsSupported] = useState(() => {
+    if (typeof document !== "undefined") {
+      return !!document.documentElement.requestFullscreen;
+    }
+    return true;
+  });
 
   const enterFullscreen = useCallback(async () => {
     try {
