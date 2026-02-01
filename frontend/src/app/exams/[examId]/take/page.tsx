@@ -167,7 +167,13 @@ export default function ExamTakePage() {
     ) {
       reportViolation("fullscreen_exit", "User exited fullscreen mode");
     }
-  }, [isFullscreen, attemptId, showFullscreenPrompt, isSupported]);
+  }, [
+    isFullscreen,
+    attemptId,
+    showFullscreenPrompt,
+    isSupported,
+    reportViolation,
+  ]);
 
   // Handle warning level changes - show blocking dialog for high warnings
   const prevWarningLevelRef = useRef(warningLevel);
@@ -190,8 +196,10 @@ export default function ExamTakePage() {
     }
 
     // Show blocking dialog for high warning (3-4 violations)
+    // Using a timeout to defer state update and avoid cascading renders
     if (warningLevel === "high" && !acknowledgedHighWarning) {
-      setShowBlockingDialog(true);
+      const timerId = setTimeout(() => setShowBlockingDialog(true), 0);
+      return () => clearTimeout(timerId);
     }
   }, [warningLevel, acknowledgedHighWarning]);
 

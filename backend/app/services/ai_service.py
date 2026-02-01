@@ -262,7 +262,7 @@ class ExamGeneratorService:
         except json.JSONDecodeError as e:
             error_msg = f"Failed to parse AI response as JSON: {e.msg}"
             raise json.JSONDecodeError(error_msg, e.doc, e.pos) from e
-        except ValueError as e:
+        except ValueError:
             # Re-raise validation errors as-is
             raise
         except Exception as e:

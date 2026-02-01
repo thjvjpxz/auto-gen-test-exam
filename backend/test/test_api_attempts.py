@@ -32,7 +32,7 @@ async def test_exam_attempts_flow():
         print(f"Exam started. Attempt ID: {attempt_id}")
 
         # 3. Auto-save Answers
-        print(f"\n--- 3. Auto-saving answers ---")
+        print("\n--- 3. Auto-saving answers ---")
         save_data = {
             "answers": {
                 "sql_part": {
@@ -51,7 +51,7 @@ async def test_exam_attempts_flow():
             print("Answers saved successfully.")
 
         # 4. Log Violation
-        print(f"\n--- 4. Logging violation (tab_switch) ---")
+        print("\n--- 4. Logging violation (tab_switch) ---")
         violation_data = {
             "violation_type": "tab_switch",
             "timestamp": "2025-01-30T10:30:00Z",
@@ -64,7 +64,7 @@ async def test_exam_attempts_flow():
             print(f"Violation logged. Trust score: {response.json().get('trust_score')}")
 
         # 5. Submit Exam
-        print(f"\n--- 5. Submitting Exam ---")
+        print("\n--- 5. Submitting Exam ---")
         submit_data = {
             "answers": {
                 "sql_part": {
@@ -90,7 +90,7 @@ async def test_exam_attempts_flow():
             print(f"AI Overall Feedback: {result.get('grading', {}).get('overall_feedback')}")
 
         # 6. Get Result
-        print(f"\n--- 6. Getting Result ---")
+        print("\n--- 6. Getting Result ---")
         response = await client.get(f"/api/v1/attempts/{attempt_id}/result", headers=headers)
         if response.status_code != 200:
             print(f"Get result failed: {response.text}")

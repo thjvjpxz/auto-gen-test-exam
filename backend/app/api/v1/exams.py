@@ -236,8 +236,8 @@ async def list_exams(
     
     # Non-admin users only see published exams
     if current_user.role != UserRole.ADMIN:
-        stmt = stmt.where(Exam.is_published == True)
-        count_stmt = count_stmt.where(Exam.is_published == True)
+        stmt = stmt.where(Exam.is_published.is_(True))
+        count_stmt = count_stmt.where(Exam.is_published.is_(True))
     
     # Get total count
     total_result = await db.execute(count_stmt)
