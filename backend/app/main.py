@@ -4,20 +4,46 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 
 from app.api.v1.attempts import router as attempts_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.exams import router as exams_router
 from app.api.v1.health import router as health_router
 from app.core.config import get_settings
+from app.core.security import hash_password
 from app.db.base import Base
-from app.db.session import engine
+from app.db.session import engine, SessionLocal
+from app.models.user import User, UserRole
+
+
+async def seed_admin_user() -> None:
+    """Tạo admin user mặc định nếu chưa tồn tại."""
+    settings = get_settings()
+
+    async with SessionLocal() as session:
+        stmt = select(User).where(User.email == settings.admin_email)
+        result = await session.execute(stmt)
+        existing_admin = result.scalar_one_or_none()
+
+        if existing_admin is None:
+            admin = User(
+                email=settings.admin_email,
+                name=settings.admin_name,
+                password_hash=hash_password(settings.admin_password),
+                role=UserRole.ADMIN,
+            )
+            session.add(admin)
+            await session.commit()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    await seed_admin_user()
+
     yield
     await engine.dispose()
 
