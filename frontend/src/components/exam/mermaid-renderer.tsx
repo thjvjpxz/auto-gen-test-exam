@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import mermaid from "mermaid";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Database, RefreshCw } from "lucide-react";
@@ -75,7 +75,7 @@ export function MermaidRenderer({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const renderChart = async () => {
+  const renderChart = useCallback(async () => {
     if (!containerRef.current || !chart) return;
 
     setIsLoading(true);
@@ -100,11 +100,11 @@ export function MermaidRenderer({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [chart]);
 
   useEffect(() => {
     renderChart();
-  }, [chart]);
+  }, [renderChart]);
 
   if (!chart) {
     return (

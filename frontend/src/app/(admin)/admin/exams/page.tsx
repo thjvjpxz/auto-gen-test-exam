@@ -3,14 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  PlusCircle,
   Filter,
   MoreHorizontal,
   Eye,
   Trash2,
   Globe,
   GlobeLock,
-  FileText,
   ChevronLeft,
   ChevronRight,
   Sparkles,

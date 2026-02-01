@@ -1,11 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useCallback,
+  type RefObject,
+} from "react";
 
 interface UseScrollRevealOptions {
   threshold?: number;
   rootMargin?: string;
   once?: boolean;
+}
+
+function subscribeToReducedMotion(callback: () => void) {
+  const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mediaQuery.addEventListener("change", callback);
+  return () => mediaQuery.removeEventListener("change", callback);
+}
+
+function getReducedMotionSnapshot() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function getReducedMotionServerSnapshot() {
+  return false;
 }
 
 /**
@@ -25,49 +46,49 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
   } = options;
 
   const ref = useRef<T | null>(null);
-  const [isRevealed, setIsRevealed] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [isIntersecting, setIsIntersecting] = useState(false);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(mediaQuery.matches);
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    getReducedMotionSnapshot,
+    getReducedMotionServerSnapshot,
+  );
 
-    const handleChange = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
+  const handleIntersection = useCallback(
+    (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setIsIntersecting(true);
+          if (once) {
+            observer.unobserve(entry.target);
+          }
+        } else if (!once) {
+          setIsIntersecting(false);
+        }
+      });
+    },
+    [once],
+  );
 
   useEffect(() => {
     if (prefersReducedMotion) {
-      setIsRevealed(true);
       return;
     }
 
     const element = ref.current;
     if (!element) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsRevealed(true);
-            if (once) {
-              observer.unobserve(entry.target);
-            }
-          } else if (!once) {
-            setIsRevealed(false);
-          }
-        });
-      },
-      { threshold, rootMargin },
-    );
+    const observer = new IntersectionObserver(handleIntersection, {
+      threshold,
+      rootMargin,
+    });
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [threshold, rootMargin, once, prefersReducedMotion]);
+  }, [threshold, rootMargin, prefersReducedMotion, handleIntersection]);
+
+  // If user prefers reduced motion, always show revealed state
+  const isRevealed = prefersReducedMotion || isIntersecting;
 
   return [ref, isRevealed];
 }
