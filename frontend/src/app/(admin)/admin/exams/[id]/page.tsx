@@ -36,6 +36,8 @@ import {
   useDeleteExam,
 } from "@/hooks/exam";
 import { MermaidRenderer } from "@/components/exam/mermaid-renderer";
+import { ExamSettingsEditor } from "@/components/admin/exam-settings-editor";
+import { ExamBasicInfoEditor } from "@/components/admin/exam-basic-info-editor";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import type { ExamType } from "@/types";
@@ -107,23 +109,35 @@ export default function ExamDetailPage({ params }: PageProps) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-12 w-96" />
-        <Skeleton className="h-64 w-full" />
+        <div className="space-y-3">
+          <Skeleton className="h-10 w-96" />
+          <Skeleton className="h-5 w-64" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-lg" />
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     );
   }
 
   if (error || !exam) {
     return (
-      <div className="text-center py-12">
-        <FileText className="mx-auto h-12 w-12 text-slate-300" />
-        <h2 className="mt-4 text-xl font-heading font-semibold text-slate-900">
-          Không tìm thấy đề thi
-        </h2>
-        <p className="mt-2 text-slate-500">
-          Đề thi này không tồn tại hoặc đã bị xóa
-        </p>
-        <Button asChild className="mt-4 cursor-pointer">
+      <div className="flex flex-col items-center gap-4 py-16">
+        <div className="flex size-16 items-center justify-center rounded-full bg-muted">
+          <FileText className="size-8 text-muted-foreground" />
+        </div>
+        <div className="text-center">
+          <h2 className="font-heading text-xl font-semibold text-foreground">
+            Không tìm thấy đề thi
+          </h2>
+          <p className="mt-1 text-muted-foreground">
+            Đề thi này không tồn tại hoặc đã bị xóa
+          </p>
+        </div>
+        <Button asChild className="mt-2 cursor-pointer">
           <Link href="/admin/exams">Quay lại danh sách</Link>
         </Button>
       </div>
@@ -136,54 +150,54 @@ export default function ExamDetailPage({ params }: PageProps) {
       <Button
         variant="ghost"
         asChild
-        className="-ml-2 text-slate-600 hover:text-slate-900 cursor-pointer"
+        className="animate-fade-in -ml-2 cursor-pointer text-muted-foreground transition-all duration-200 hover:text-foreground"
       >
         <Link href="/admin/exams">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 size-4" />
           Quay lại danh sách
         </Link>
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div className="space-y-2">
+      <div className="animate-fade-in-down flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-heading font-bold text-slate-900">
+            <h1 className="font-heading text-3xl font-bold text-foreground">
               {exam.title}
             </h1>
             <Badge
               className={
                 exam.is_published
-                  ? "bg-green-100 text-green-800"
-                  : "bg-slate-100 text-slate-700"
+                  ? "bg-green-100 text-green-700 hover:bg-green-100"
+                  : "bg-muted text-muted-foreground hover:bg-muted"
               }
             >
               {exam.is_published ? "Đã xuất bản" : "Bản nháp"}
             </Badge>
           </div>
           {exam.subject && (
-            <p className="text-lg text-slate-600">{exam.subject}</p>
+            <p className="text-lg text-muted-foreground">{exam.subject}</p>
           )}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-            <span className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
+              <FileText className="size-4" />
               {examTypeLabels[exam.exam_type]}
             </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
+            <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
+              <Clock className="size-4" />
               {exam.duration} phút
             </span>
-            <span className="flex items-center gap-1">
-              <Target className="h-4 w-4" />
+            <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
+              <Target className="size-4" />
               Điểm đạt: {exam.passing_score}%
             </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
+            <span className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
+              <Calendar className="size-4" />
               {formatDate(exam.created_at)}
             </span>
             {exam.ai_generated && (
-              <span className="flex items-center gap-1 text-blue-600">
-                <Sparkles className="h-4 w-4" />
+              <span className="flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1 text-primary">
+                <Sparkles className="size-4" />
                 AI Generated ({exam.gemini_model})
               </span>
             )}
@@ -196,28 +210,28 @@ export default function ExamDetailPage({ params }: PageProps) {
               variant="outline"
               onClick={handleUnpublish}
               disabled={unpublishMutation.isPending}
-              className="cursor-pointer"
+              className="cursor-pointer transition-all duration-200 hover:border-amber-500/50 hover:text-amber-600"
             >
-              <GlobeLock className="mr-2 h-4 w-4" />
+              <GlobeLock className="mr-2 size-4" />
               Hủy xuất bản
             </Button>
           ) : (
             <Button
               onClick={handlePublish}
               disabled={publishMutation.isPending}
-              className="bg-accent hover:brightness-95 text-accent-foreground cursor-pointer transition-all"
+              className="glow-effect cursor-pointer bg-accent text-accent-foreground transition-all duration-200 hover:scale-[1.02] hover:bg-accent/90"
             >
-              <Globe className="mr-2 h-4 w-4" />
+              <Globe className="mr-2 size-4" />
               Xuất bản
             </Button>
           )}
           <Button
-            variant="destructive"
+            variant="outline"
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
-            className="cursor-pointer"
+            className="cursor-pointer transition-all duration-200 hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
           >
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="mr-2 size-4" />
             Xóa
           </Button>
         </div>
@@ -226,20 +240,29 @@ export default function ExamDetailPage({ params }: PageProps) {
       <Separator />
 
       {/* Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview" className="cursor-pointer">
+      <Tabs defaultValue="overview" className="animate-fade-in-up space-y-6">
+        <TabsList className="w-full justify-start bg-muted/50">
+          <TabsTrigger
+            value="overview"
+            className="cursor-pointer data-[state=active]:bg-background"
+          >
             Tổng quan
           </TabsTrigger>
           {exam.exam_data?.sql_part && (
-            <TabsTrigger value="sql" className="cursor-pointer">
-              <Database className="mr-2 h-4 w-4" />
+            <TabsTrigger
+              value="sql"
+              className="cursor-pointer data-[state=active]:bg-background"
+            >
+              <Database className="mr-2 size-4" />
               Phần SQL
             </TabsTrigger>
           )}
           {exam.exam_data?.testing_part && (
-            <TabsTrigger value="testing" className="cursor-pointer">
-              <TestTube className="mr-2 h-4 w-4" />
+            <TabsTrigger
+              value="testing"
+              className="cursor-pointer data-[state=active]:bg-background"
+            >
+              <TestTube className="mr-2 size-4" />
               Phần Testing
             </TabsTrigger>
           )}
@@ -247,114 +270,31 @@ export default function ExamDetailPage({ params }: PageProps) {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100">
-                    <FileText className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Loại đề</p>
-                    <p className="font-medium text-slate-900">
-                      {examTypeLabels[exam.exam_type]}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-100">
-                    <Clock className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Thời gian</p>
-                    <p className="font-medium text-slate-900">
-                      {exam.duration} phút
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-100">
-                    <Target className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Điểm đạt</p>
-                    <p className="font-medium text-slate-900">
-                      {exam.passing_score}%
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-100">
-                    <Database className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Câu hỏi SQL</p>
-                    <p className="font-medium text-slate-900">
-                      {exam.exam_data?.sql_part?.questions?.length ?? 0} câu
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Basic Info Editor */}
+          <ExamBasicInfoEditor
+            examId={examId}
+            title={exam.title}
+            subject={exam.subject}
+            duration={exam.duration}
+            passingScore={exam.passing_score}
+          />
 
-          {exam.settings && (
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle className="text-base font-medium">Cài đặt</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <dt className="text-sm text-slate-500">Cho phép xem lại</dt>
-                    <dd className="font-medium text-slate-900">
-                      {exam.settings.allow_review ? "Có" : "Không"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-slate-500">Hiện đáp án mẫu</dt>
-                    <dd className="font-medium text-slate-900">
-                      {exam.settings.show_sample_solution ? "Có" : "Không"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-slate-500">
-                      Số lần làm tối đa
-                    </dt>
-                    <dd className="font-medium text-slate-900">
-                      {exam.settings.max_attempts ?? "Không giới hạn"}
-                    </dd>
-                  </div>
-                </dl>
-              </CardContent>
-            </Card>
-          )}
+          {/* Exam Settings Editor */}
+          <ExamSettingsEditor examId={examId} settings={exam.settings} />
         </TabsContent>
 
         {/* SQL Tab */}
         {exam.exam_data?.sql_part && (
           <TabsContent value="sql" className="space-y-6">
             {/* ERD Diagram */}
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <Database className="h-4 w-4" />
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="border-b bg-muted/30">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <Database className="size-4 text-primary" />
                   Sơ đồ ERD
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 <MermaidRenderer
                   chart={
                     exam.exam_data.sql_part.mermaid_code ??
@@ -366,26 +306,27 @@ export default function ExamDetailPage({ params }: PageProps) {
             </Card>
 
             {/* SQL Questions */}
-            <Card className="border-slate-200">
-              <CardHeader>
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-base font-medium">
                   Câu hỏi SQL ({exam.exam_data.sql_part.questions?.length ?? 0}{" "}
                   câu)
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="pt-4">
+                <div className="space-y-3">
                   {(exam.exam_data.sql_part.questions ?? []).map(
                     (question, index) => (
                       <div
                         key={index}
-                        className="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                        className="group rounded-lg border bg-muted/30 p-4 transition-all duration-200 hover:bg-muted/50"
+                        style={{ animationDelay: `${index * 50}ms` }}
                       >
                         <div className="flex items-start gap-3">
-                          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-medium">
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-medium text-white shadow-sm">
                             {index + 1}
                           </span>
-                          <p className="text-slate-900 whitespace-pre-wrap">
+                          <p className="whitespace-pre-wrap text-foreground">
                             {question}
                           </p>
                         </div>
@@ -402,23 +343,23 @@ export default function ExamDetailPage({ params }: PageProps) {
         {exam.exam_data?.testing_part && (
           <TabsContent value="testing" className="space-y-6">
             {/* Scenario */}
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <TestTube className="h-4 w-4" />
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="border-b bg-muted/30">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <TestTube className="size-4 text-primary" />
                   Kịch bản kiểm thử
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-slate-900 whitespace-pre-wrap">
+              <CardContent className="pt-4">
+                <p className="whitespace-pre-wrap leading-relaxed text-foreground">
                   {exam.exam_data.testing_part.scenario}
                 </p>
               </CardContent>
             </Card>
 
             {/* Rules Table */}
-            <Card className="border-slate-200">
-              <CardHeader>
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-base font-medium">
                   Bảng quy tắc
                 </CardTitle>
@@ -426,19 +367,26 @@ export default function ExamDetailPage({ params }: PageProps) {
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead className="font-semibold">Điều kiện</TableHead>
-                      <TableHead className="font-semibold">Kết quả</TableHead>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="font-semibold text-foreground">
+                        Điều kiện
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        Kết quả
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(exam.exam_data.testing_part.rules_table ?? []).map(
                       (rule, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="text-slate-900">
+                        <TableRow
+                          key={index}
+                          className="transition-colors duration-150 hover:bg-muted/50"
+                        >
+                          <TableCell className="text-foreground">
                             {rule.condition}
                           </TableCell>
-                          <TableCell className="text-slate-900">
+                          <TableCell className="text-foreground">
                             {rule.result}
                           </TableCell>
                         </TableRow>
@@ -450,12 +398,12 @@ export default function ExamDetailPage({ params }: PageProps) {
             </Card>
 
             {/* Question */}
-            <Card className="border-slate-200">
-              <CardHeader>
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-base font-medium">Câu hỏi</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-slate-900 whitespace-pre-wrap">
+              <CardContent className="pt-4">
+                <p className="whitespace-pre-wrap text-foreground">
                   {exam.exam_data.testing_part.question}
                 </p>
               </CardContent>

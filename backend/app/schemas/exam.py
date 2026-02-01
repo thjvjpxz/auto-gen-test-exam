@@ -153,6 +153,28 @@ class ExamListResponse(BaseModel):
     limit: int
 
 
+class ExamSettingsUpdate(BaseModel):
+    """Schema for updating exam settings (partial update).
+    
+    All fields are optional to support partial update.
+    """
+    
+    allow_review: bool | None = Field(
+        default=None,
+        description="Cho phép xem lại kết quả sau khi nộp bài",
+    )
+    show_sample_solution: bool | None = Field(
+        default=None,
+        description="Hiển thị đáp án mẫu sau khi nộp bài",
+    )
+    max_attempts: int | None = Field(
+        default=None,
+        ge=1,
+        le=100,
+        description="Số lần làm bài tối đa (1-100, null = không giới hạn)",
+    )
+
+
 class ExamUpdateRequest(BaseModel):
     """Request schema for updating an exam (partial update).
     
@@ -165,6 +187,7 @@ class ExamUpdateRequest(BaseModel):
             "example": {
                 "is_published": True,
                 "title": "Đề thi SQL và Testing cơ bản",
+                "settings": {"allow_review": True, "max_attempts": 3},
             }
         }
     )
@@ -196,3 +219,8 @@ class ExamUpdateRequest(BaseModel):
         default=None,
         description="Trạng thái xuất bản (true = đã xuất bản, false = chưa xuất bản)",
     )
+    settings: ExamSettingsUpdate | None = Field(
+        default=None,
+        description="Cài đặt đề thi (partial update)",
+    )
+

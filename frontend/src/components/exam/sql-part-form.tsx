@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
+import { Database, Code2, HelpCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,12 @@ const MermaidRenderer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-64 bg-slate-100 animate-pulse rounded-md" />
+      <div className="flex h-64 items-center justify-center rounded-lg bg-muted/50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="size-8 animate-spin rounded-full border-4 border-muted-foreground/20 border-t-primary" />
+          <p className="text-sm text-muted-foreground">Đang tải sơ đồ...</p>
+        </div>
+      </div>
     ),
   },
 );
@@ -42,20 +48,26 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2">
-          <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+    <Card className="overflow-hidden border-2 transition-shadow duration-300 hover:shadow-md">
+      {/* Top accent */}
+      <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
+
+      <CardHeader className="border-b bg-muted/30">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-sm">
             1
-          </span>
-          Phần SQL
+          </div>
+          <span>Phần SQL</span>
+          <Database className="size-5 text-muted-foreground" />
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+
+      <CardContent className="space-y-6 pt-6">
         {/* ERD Diagram */}
         {erdDiagram && (
-          <div className="border rounded-lg p-4 bg-slate-50">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
+          <div className="overflow-hidden rounded-lg border bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Database className="size-4" />
               Sơ đồ ERD
             </h3>
             <MermaidRenderer chart={erdDiagram} />
@@ -64,9 +76,12 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
 
         {/* Context */}
         {sqlPart.context && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-800 mb-2">Bối cảnh</h3>
-            <p className="text-sm text-blue-700 whitespace-pre-wrap">
+          <div className="overflow-hidden rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-800">
+              <HelpCircle className="size-4" />
+              Bối cảnh
+            </h3>
+            <p className="whitespace-pre-wrap text-sm text-blue-700">
               {sqlPart.context}
             </p>
           </div>
@@ -75,56 +90,66 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
         {/* Question 1 */}
         {question1 && (
           <div className="space-y-3">
-            <div className="flex items-start gap-2">
-              <span className="shrink-0 h-5 w-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-medium">
+            <div className="flex items-start gap-3">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
                 1
               </span>
-              <div>
+              <div className="flex-1">
                 <Label htmlFor="sql_q1" className="text-base font-medium">
                   {question1}
                 </Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Điểm tối đa: {sqlPart.question_1_points ?? 25}
-                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    Điểm tối đa: {sqlPart.question_1_points ?? 25}
+                  </span>
+                </div>
               </div>
             </div>
-            <Textarea
-              id="sql_q1"
-              value={sqlAnswers.question_1_answer ?? ""}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                handleChange("question_1_answer", e.target.value)
-              }
-              placeholder="Nhập câu lệnh SQL của bạn..."
-              className="font-mono text-sm min-h-[120px] resize-y"
-            />
+            <div className="group relative">
+              <Code2 className="absolute left-3 top-3 size-4 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+              <Textarea
+                id="sql_q1"
+                value={sqlAnswers.question_1_answer ?? ""}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  handleChange("question_1_answer", e.target.value)
+                }
+                placeholder="Nhập câu lệnh SQL của bạn..."
+                className="min-h-[120px] resize-y pl-10 font-mono text-sm transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
           </div>
         )}
 
         {/* Question 2 */}
         {question2 && (
           <div className="space-y-3">
-            <div className="flex items-start gap-2">
-              <span className="shrink-0 h-5 w-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-medium">
+            <div className="flex items-start gap-3">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
                 2
               </span>
-              <div>
+              <div className="flex-1">
                 <Label htmlFor="sql_q2" className="text-base font-medium">
                   {question2}
                 </Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Điểm tối đa: {sqlPart.question_2_points ?? 25}
-                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    Điểm tối đa: {sqlPart.question_2_points ?? 25}
+                  </span>
+                </div>
               </div>
             </div>
-            <Textarea
-              id="sql_q2"
-              value={sqlAnswers.question_2_answer ?? ""}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                handleChange("question_2_answer", e.target.value)
-              }
-              placeholder="Nhập câu lệnh SQL của bạn..."
-              className="font-mono text-sm min-h-[120px] resize-y"
-            />
+            <div className="group relative">
+              <Code2 className="absolute left-3 top-3 size-4 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+              <Textarea
+                id="sql_q2"
+                value={sqlAnswers.question_2_answer ?? ""}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  handleChange("question_2_answer", e.target.value)
+                }
+                placeholder="Nhập câu lệnh SQL của bạn..."
+                className="min-h-[120px] resize-y pl-10 font-mono text-sm transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
           </div>
         )}
       </CardContent>

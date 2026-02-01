@@ -3,7 +3,14 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, User as UserIcon, FileText, History } from "lucide-react";
+import {
+  LogOut,
+  User as UserIcon,
+  FileText,
+  BookOpen,
+  Home,
+  LayoutDashboard,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -36,6 +43,8 @@ export default function UserLayout({ children }: UserLayoutProps) {
     router.push("/login");
   };
 
+  const isAdmin = user?.role === "admin";
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -51,24 +60,21 @@ export default function UserLayout({ children }: UserLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/exams" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">
-                E
-              </span>
-            </div>
-            <span className="font-semibold text-lg hidden sm:inline">
-              Exam Portal
-            </span>
+          <Link
+            href="/"
+            className="group flex items-center gap-2 text-lg font-semibold text-foreground transition-colors duration-200 hover:text-primary"
+          >
+            <BookOpen className="size-6 text-primary transition-transform duration-200 group-hover:scale-110" />
+            <span className="hidden sm:inline">IT Exam</span>
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Link href="/exams">
               <Button variant="ghost" size="sm" className="cursor-pointer">
-                <FileText className="h-4 w-4 mr-2" />
-                Bài thi
+                <FileText className="size-4 mr-2" />
+                <span className="hidden sm:inline">Bài thi</span>
               </Button>
             </Link>
 
@@ -77,10 +83,10 @@ export default function UserLayout({ children }: UserLayoutProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex items-center gap-2 cursor-pointer"
+                  className="flex items-center gap-2 cursor-pointer transition-all duration-200 hover:bg-primary/10"
                 >
-                  <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                    <UserIcon className="h-4 w-4 text-primary" />
+                  <div className="flex size-7 items-center justify-center rounded-full bg-primary/10">
+                    <UserIcon className="size-4 text-primary" />
                   </div>
                   <span className="hidden sm:inline max-w-[120px] truncate">
                     {user?.name || user?.email}
@@ -95,18 +101,38 @@ export default function UserLayout({ children }: UserLayoutProps) {
                   </p>
                 </div>
                 <DropdownMenuSeparator />
-                <Link href="/profile">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <History className="h-4 w-4 mr-2" />
-                    Hồ sơ
+                <DropdownMenuItem asChild>
+                  <Link href="/" className="flex items-center gap-2">
+                    <Home className="size-4" />
+                    Trang chủ
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/exams" className="flex items-center gap-2">
+                    <BookOpen className="size-4" />
+                    Danh sách đề thi
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center gap-2">
+                    <UserIcon className="size-4" />
+                    Hồ sơ của tôi
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin" className="flex items-center gap-2">
+                      <LayoutDashboard className="size-4" />
+                      Quản trị
+                    </Link>
                   </DropdownMenuItem>
-                </Link>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
                   className="cursor-pointer text-red-600 focus:text-red-600"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
+                  <LogOut className="size-4 mr-2" />
                   Đăng xuất
                 </DropdownMenuItem>
               </DropdownMenuContent>

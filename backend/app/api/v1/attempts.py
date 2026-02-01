@@ -24,7 +24,7 @@ from app.schemas.attempt import (
     ViolationLogResponse,
 )
 from app.schemas.exam import ExamDataOut
-from app.schemas.grading import AttemptResultOut, GradingResult
+from app.schemas.grading import AttemptResultOut, GradingResult, SubmittedAnswers
 from app.services.grading_service import GradingService
 
 router = APIRouter(tags=["attempts"])
@@ -468,6 +468,10 @@ async def submit_exam_attempt(
         violation_count=violation_count,
         flagged_for_review=attempt.trust_score < 50,
         grading=grading_result,
+        submitted_answers=SubmittedAnswers(
+            sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
+            testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
+        ),
     )
 
 
@@ -554,6 +558,10 @@ async def get_attempt_result(
         violation_count=violation_count,
         flagged_for_review=attempt.trust_score < 50,
         grading=grading,
+        submitted_answers=SubmittedAnswers(
+            sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
+            testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
+        ),
     )
 
 

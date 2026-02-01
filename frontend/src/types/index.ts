@@ -305,6 +305,21 @@ export interface ExamListParams {
   is_published?: boolean;
 }
 
+export interface ExamSettingsUpdate {
+  allow_review?: boolean;
+  show_sample_solution?: boolean;
+  max_attempts?: number | null;
+}
+
+export interface ExamUpdateData {
+  title?: string;
+  subject?: string;
+  duration?: number;
+  passing_score?: number;
+  is_published?: boolean;
+  settings?: ExamSettingsUpdate;
+}
+
 export interface LoginFormData {
   email: string;
   password: string;
@@ -395,6 +410,19 @@ export interface TestCaseItem {
   actual_result?: string | null;
 }
 
+/** User's submitted answers for result display */
+export interface SubmittedAnswers {
+  sql_part?: {
+    question_1_answer?: string | null;
+    question_2_answer?: string | null;
+  } | null;
+  testing_part?: {
+    technique?: string | null;
+    explanation?: string | null;
+    test_cases?: TestCaseItem[];
+  } | null;
+}
+
 /** Response from POST /attempts/{attempt_id}/submit and GET /attempts/{attempt_id}/result */
 export interface ExamSubmitResponse {
   attempt_id: number;
@@ -412,6 +440,7 @@ export interface ExamSubmitResponse {
   violation_count: number;
   flagged_for_review: boolean;
   grading: ExamGrading;
+  submitted_answers?: SubmittedAnswers | null;
 }
 
 export interface ExamGrading {
