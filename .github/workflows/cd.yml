@@ -251,6 +251,7 @@ jobs:
           echo "[WARN] Frontend deployment skipped - missing Vercel secrets"
           echo "url=skipped" >> $GITHUB_OUTPUT
         id: skip-deploy
+        working-directory: .
 
       - name: Deployment summary
         run: |
@@ -261,6 +262,7 @@ jobs:
           else
             echo "- **URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
           fi
+        working-directory: .
 
   # ============================================
   # Post-Deployment Health Check
