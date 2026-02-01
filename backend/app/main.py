@@ -18,7 +18,7 @@ from app.models.user import User, UserRole
 
 
 async def seed_admin_user() -> None:
-    """Tạo admin user mặc định nếu chưa tồn tại."""
+    """Tạo admin user mặc định, xóa và tạo lại nếu đã tồn tại."""
     settings = get_settings()
 
     async with SessionLocal() as session:
@@ -26,15 +26,18 @@ async def seed_admin_user() -> None:
         result = await session.execute(stmt)
         existing_admin = result.scalar_one_or_none()
 
-        if existing_admin is None:
-            admin = User(
-                email=settings.admin_email,
-                name=settings.admin_name,
-                password_hash=hash_password(settings.admin_password),
-                role=UserRole.ADMIN,
-            )
-            session.add(admin)
+        if existing_admin is not None:
+            await session.delete(existing_admin)
             await session.commit()
+
+        admin = User(
+            email=settings.admin_email,
+            name=settings.admin_name,
+            password_hash=hash_password(settings.admin_password),
+            role=UserRole.ADMIN,
+        )
+        session.add(admin)
+        await session.commit()
 
 
 @asynccontextmanager

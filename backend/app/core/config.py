@@ -103,7 +103,7 @@ class Settings(BaseSettings):
     cors_origins: List[str] = []
 
     admin_email: str = "admin@123.com"
-    admin_password: str = "123"
+    admin_password: str = "123Cuong"
     admin_name: str = "thjvjpxz"
 
     @field_validator("cors_origins", mode="before")

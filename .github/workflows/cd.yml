@@ -139,7 +139,7 @@ jobs:
             curl -X POST "$DEPLOY_HOOK"
             echo "url=https://auto-gen-test-exam-api.onrender.com" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ Deploy hook not configured, skipping deployment"
+            echo "[WARN] Deploy hook not configured, skipping deployment"
             echo "url=not-deployed" >> $GITHUB_OUTPUT
           fi
 
@@ -165,15 +165,38 @@ jobs:
         working-directory: frontend
 
     steps:
+      - name: Validate Vercel secrets
+        id: validate
+        run: |
+          if [[ -z "${{ secrets.VERCEL_TOKEN }}" ]]; then
+            echo "[ERROR] VERCEL_TOKEN secret is not configured"
+            echo "Please add VERCEL_TOKEN to GitHub Secrets"
+            echo "Get token from: https://vercel.com/account/tokens"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [[ -z "${{ secrets.VERCEL_ORG_ID }}" ]] || [[ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]]; then
+            echo "[ERROR] VERCEL_ORG_ID or VERCEL_PROJECT_ID is not configured"
+            echo "Run 'vercel link' locally and check .vercel/project.json"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "[OK] All Vercel secrets are configured"
+          echo "skip=false" >> $GITHUB_OUTPUT
+        working-directory: .
+
       - name: Checkout code
+        if: steps.validate.outputs.skip != 'true'
         uses: actions/checkout@v4
 
       - name: Setup pnpm
+        if: steps.validate.outputs.skip != 'true'
         uses: pnpm/action-setup@v3
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
+        if: steps.validate.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -181,9 +204,11 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
+        if: steps.validate.outputs.skip != 'true'
+        run: npm install -g vercel@latest
 
       - name: Pull Vercel Environment
+        if: steps.validate.outputs.skip != 'true'
         run: |
           if [[ "${{ needs.setup.outputs.environment }}" == "production" ]]; then
             vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
@@ -195,6 +220,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Build Project
+        if: steps.validate.outputs.skip != 'true'
         run: |
           if [[ "${{ needs.setup.outputs.environment }}" == "production" ]]; then
             vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
@@ -207,6 +233,7 @@ jobs:
 
       - name: Deploy to Vercel
         id: deploy
+        if: steps.validate.outputs.skip != 'true'
         run: |
           if [[ "${{ needs.setup.outputs.environment }}" == "production" ]]; then
             URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
@@ -218,11 +245,22 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+      - name: Skip deployment notice
+        if: steps.validate.outputs.skip == 'true'
+        run: |
+          echo "[WARN] Frontend deployment skipped - missing Vercel secrets"
+          echo "url=skipped" >> $GITHUB_OUTPUT
+        id: skip-deploy
+
       - name: Deployment summary
         run: |
           echo "## Frontend Deployment" >> $GITHUB_STEP_SUMMARY
           echo "- **Environment:** ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.validate.outputs.skip }}" == "true" ]]; then
+            echo "- **Status:** Skipped (missing secrets)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
   # ============================================
   # Post-Deployment Health Check
@@ -249,12 +287,12 @@ jobs:
           if [[ -n "$BACKEND_URL" ]]; then
             response=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/api/health" || echo "000")
             if [[ "$response" == "200" ]]; then
-              echo "✅ Backend health check passed"
+              echo "[OK] Backend health check passed"
             else
-              echo "⚠️ Backend health check returned: $response"
+              echo "[WARN] Backend health check returned: $response"
             fi
           else
-            echo "⚠️ Backend URL not configured"
+            echo "[WARN] Backend URL not configured"
           fi
 
       - name: Create deployment summary
