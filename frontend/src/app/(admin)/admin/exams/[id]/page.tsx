@@ -19,12 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -34,7 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { useExam, usePublishExam, useUnpublishExam, useDeleteExam } from "@/hooks/exam";
+import {
+  useExam,
+  usePublishExam,
+  useUnpublishExam,
+  useDeleteExam,
+} from "@/hooks/exam";
 import { MermaidRenderer } from "@/components/exam/mermaid-renderer";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -78,7 +78,12 @@ export default function ExamDetailPage({ params }: PageProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Bạn có chắc muốn xóa đề thi này? Hành động này không thể hoàn tác.")) return;
+    if (
+      !confirm(
+        "Bạn có chắc muốn xóa đề thi này? Hành động này không thể hoàn tác.",
+      )
+    )
+      return;
     try {
       await deleteMutation.mutateAsync(examId);
       toast.success("Đã xóa đề thi");
@@ -200,7 +205,7 @@ export default function ExamDetailPage({ params }: PageProps) {
             <Button
               onClick={handlePublish}
               disabled={publishMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 cursor-pointer"
+              className="bg-accent hover:brightness-95 text-accent-foreground cursor-pointer transition-all"
             >
               <Globe className="mr-2 h-4 w-4" />
               Xuất bản
@@ -266,7 +271,9 @@ export default function ExamDetailPage({ params }: PageProps) {
                   </div>
                   <div>
                     <p className="text-sm text-slate-500">Thời gian</p>
-                    <p className="font-medium text-slate-900">{exam.duration} phút</p>
+                    <p className="font-medium text-slate-900">
+                      {exam.duration} phút
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -279,7 +286,9 @@ export default function ExamDetailPage({ params }: PageProps) {
                   </div>
                   <div>
                     <p className="text-sm text-slate-500">Điểm đạt</p>
-                    <p className="font-medium text-slate-900">{exam.passing_score}%</p>
+                    <p className="font-medium text-slate-900">
+                      {exam.passing_score}%
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -321,7 +330,9 @@ export default function ExamDetailPage({ params }: PageProps) {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-slate-500">Số lần làm tối đa</dt>
+                    <dt className="text-sm text-slate-500">
+                      Số lần làm tối đa
+                    </dt>
                     <dd className="font-medium text-slate-900">
                       {exam.settings.max_attempts ?? "Không giới hạn"}
                     </dd>
@@ -344,7 +355,13 @@ export default function ExamDetailPage({ params }: PageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <MermaidRenderer chart={exam.exam_data.sql_part.mermaid_code} />
+                <MermaidRenderer
+                  chart={
+                    exam.exam_data.sql_part.mermaid_code ??
+                    exam.exam_data.sql_part.erd_diagram ??
+                    ""
+                  }
+                />
               </CardContent>
             </Card>
 
@@ -352,24 +369,29 @@ export default function ExamDetailPage({ params }: PageProps) {
             <Card className="border-slate-200">
               <CardHeader>
                 <CardTitle className="text-base font-medium">
-                  Câu hỏi SQL ({exam.exam_data.sql_part.questions.length} câu)
+                  Câu hỏi SQL ({exam.exam_data.sql_part.questions?.length ?? 0}{" "}
+                  câu)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {exam.exam_data.sql_part.questions.map((question, index) => (
-                    <div
-                      key={index}
-                      className="p-4 bg-slate-50 rounded-lg border border-slate-200"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-medium">
-                          {index + 1}
-                        </span>
-                        <p className="text-slate-900 whitespace-pre-wrap">{question}</p>
+                  {(exam.exam_data.sql_part.questions ?? []).map(
+                    (question, index) => (
+                      <div
+                        key={index}
+                        className="p-4 bg-slate-50 rounded-lg border border-slate-200"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </span>
+                          <p className="text-slate-900 whitespace-pre-wrap">
+                            {question}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -410,16 +432,18 @@ export default function ExamDetailPage({ params }: PageProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {exam.exam_data.testing_part.rules_table.map((rule, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="text-slate-900">
-                          {rule.condition}
-                        </TableCell>
-                        <TableCell className="text-slate-900">
-                          {rule.result}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {(exam.exam_data.testing_part.rules_table ?? []).map(
+                      (rule, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="text-slate-900">
+                            {rule.condition}
+                          </TableCell>
+                          <TableCell className="text-slate-900">
+                            {rule.result}
+                          </TableCell>
+                        </TableRow>
+                      ),
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -428,9 +452,7 @@ export default function ExamDetailPage({ params }: PageProps) {
             {/* Question */}
             <Card className="border-slate-200">
               <CardHeader>
-                <CardTitle className="text-base font-medium">
-                  Câu hỏi
-                </CardTitle>
+                <CardTitle className="text-base font-medium">Câu hỏi</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-slate-900 whitespace-pre-wrap">

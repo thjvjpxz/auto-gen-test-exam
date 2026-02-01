@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.attempt import ExamAttempt
     from app.models.exam import Exam
 
 
@@ -34,6 +35,11 @@ class User(Base, TimestampMixin):
     exams: Mapped[list["Exam"]] = relationship(
         "Exam",
         back_populates="creator",
+        cascade="all, delete-orphan",
+    )
+    attempts: Mapped[list["ExamAttempt"]] = relationship(
+        "ExamAttempt",
+        back_populates="user",
         cascade="all, delete-orphan",
     )
 

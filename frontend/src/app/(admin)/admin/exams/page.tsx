@@ -136,7 +136,7 @@ export default function ExamListPage() {
         </div>
         <Button
           asChild
-          className="bg-green-600 hover:bg-green-700 cursor-pointer"
+          className="bg-accent hover:brightness-95 text-accent-foreground cursor-pointer transition-all"
         >
           <Link href="/admin/exams/generate">
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -313,8 +313,8 @@ export default function ExamListPage() {
                       <Badge
                         className={
                           exam.is_published
-                            ? "bg-green-100 text-green-800 hover:bg-green-100"
-                            : "bg-slate-100 text-slate-700 hover:bg-slate-100"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-slate-100 text-slate-700"
                         }
                       >
                         {exam.is_published ? "Đã xuất bản" : "Bản nháp"}

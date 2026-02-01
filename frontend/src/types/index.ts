@@ -222,17 +222,26 @@ export interface RuleTableItem {
 }
 
 export interface ExamSQLPart {
-  mermaid_code: string;
-  questions: string[];
+  mermaid_code?: string;
+  erd_diagram?: string;
+  context?: string;
+  questions?: string[];
+  question_1?: string;
+  question_2?: string;
+  question_1_points?: number;
+  question_2_points?: number;
 }
 
 export interface ExamTestingPart {
-  scenario: string;
-  rules_table: RuleTableItem[];
-  question: string;
+  scenario?: string;
+  requirements?: string[];
+  rules_table?: RuleTableItem[];
+  question?: string;
+  max_points?: number;
 }
 
 export interface ExamData {
+  title?: string;
   sql_part?: ExamSQLPart;
   testing_part?: ExamTestingPart;
 }
@@ -275,6 +284,7 @@ export interface ExamListItem {
 
 export interface ExamListResponse {
   items: ExamListItem[];
+  exams?: ExamOut[];
   total: number;
   skip: number;
   limit: number;
@@ -312,4 +322,159 @@ export interface ExamGenerateFormData {
   duration: number;
   passing_score: number;
   subject?: string;
+}
+
+// ========== ATTEMPT API TYPES ==========
+
+export type AttemptStatus = "in_progress" | "graded";
+export type WarningLevel = "none" | "low" | "medium" | "high" | "critical";
+
+/** Response from POST /exams/{exam_id}/start */
+export interface AttemptStartResponse {
+  attempt_id: number;
+  exam_id: number;
+  started_at: string;
+  duration: number;
+  exam_data: ExamData;
+}
+
+/** Response from PATCH /attempts/{attempt_id}/save */
+export interface AttemptSaveResponse {
+  id: number;
+  exam_id: number;
+  user_id: number;
+  status: AttemptStatus;
+  answers: AnswersPayload;
+  score: number;
+  max_score: number;
+  percentage: number | null;
+  tab_switch_count: number;
+  fullscreen_exit_count: number;
+  copy_paste_count: number;
+  trust_score: number;
+  started_at: string;
+  submitted_at: string | null;
+  time_taken: number | null;
+  created_at: string;
+}
+
+/** Request body for POST /attempts/{attempt_id}/violations */
+export interface ViolationRequest {
+  violation_type: ViolationType;
+  timestamp: string;
+  details?: string;
+}
+
+/** Response from POST /attempts/{attempt_id}/violations */
+export interface ViolationResponse {
+  success: boolean;
+  trust_score: number;
+  tab_switch_count: number;
+  fullscreen_exit_count: number;
+  copy_paste_count: number;
+  warning_level: WarningLevel;
+  message?: string;
+}
+
+/** Answers payload for save/submit */
+export interface AnswersPayload {
+  sql_part?: {
+    question_1_answer?: string | null;
+    question_2_answer?: string | null;
+  } | null;
+  testing_part?: {
+    technique?: string | null;
+    explanation?: string | null;
+    test_cases?: TestCaseItem[];
+  } | null;
+}
+
+export interface TestCaseItem {
+  input: string;
+  expected_output: string;
+  actual_result?: string | null;
+}
+
+/** Response from POST /attempts/{attempt_id}/submit and GET /attempts/{attempt_id}/result */
+export interface ExamSubmitResponse {
+  attempt_id: number;
+  exam_id: number;
+  exam_title: string;
+  user_id: number;
+  started_at: string;
+  submitted_at: string;
+  time_taken: number;
+  score: number;
+  max_score: number;
+  percentage: number;
+  passed: boolean;
+  trust_score: number;
+  violation_count: number;
+  flagged_for_review: boolean;
+  grading: ExamGrading;
+}
+
+export interface ExamGrading {
+  sql_part?: SqlPartGrading;
+  testing_part?: TestingPartGradingResult;
+  total_score: number;
+  max_score: number;
+  percentage: number;
+  passed: boolean;
+  overall_feedback: string;
+  strengths: string[];
+  improvements: string[];
+}
+
+export interface SqlPartGrading {
+  question_1?: SqlQuestionGradingResult;
+  question_2?: SqlQuestionGradingResult;
+  total_score: number;
+  max_score: number;
+}
+
+export interface SqlQuestionGradingResult {
+  score: number;
+  max_score: number;
+  feedback: string;
+  correct_syntax: boolean;
+  logic_correct: boolean;
+  optimal_query: boolean;
+  issues?: string[];
+  suggestions?: string[];
+}
+
+export interface TestingPartGradingResult {
+  technique_score: number;
+  technique_correct: boolean;
+  explanation_score: number;
+  test_cases_score: number;
+  coverage_score: number;
+  total_score: number;
+  max_score: number;
+  feedback: string;
+  missing_scenarios?: string[];
+  suggestions?: string[];
+}
+
+export interface UserAttemptHistoryItem {
+  id: number;
+  exam_id: number;
+  exam_title: string;
+  exam_type: ExamType;
+  status: ExamAttemptStatus;
+  score: number;
+  max_score: number;
+  percentage: number | null;
+  passed: boolean;
+  passing_score: number;
+  trust_score: number;
+  started_at: string;
+  submitted_at: string | null;
+  time_taken: number | null;
+}
+
+export interface UserAttemptHistoryResponse {
+  items: UserAttemptHistoryItem[];
+  total: number;
 }

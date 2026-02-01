@@ -1,8 +1,8 @@
 ---
 ## description: Rule for Cursor/Antigravity to produce clean, maintainable code with minimal smells. Comments are docFunction-only.
+---
 
 # Clean Code Rule — Cursor/Antigravity
----
 
 ## Mục tiêu
 

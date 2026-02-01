@@ -40,7 +40,19 @@ api.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error);
+    // Extract error message from API response 
+    const responseData = error.response?.data as
+      | { detail?: string; message?: string }
+      | undefined;
+    const apiErrorMessage =
+      responseData?.detail ||
+      responseData?.message ||
+      error.message ||
+      "Đã có lỗi xảy ra";
+
+    // Create new Error with API message
+    const enhancedError = new Error(apiErrorMessage);
+    return Promise.reject(enhancedError);
   },
 );
 
