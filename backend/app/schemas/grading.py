@@ -1,6 +1,16 @@
 """Pydantic schemas for AI grading results."""
 
+from enum import Enum
+
 from pydantic import BaseModel, Field
+
+
+class GradingStatus(str, Enum):
+    """Status of the grading process."""
+
+    COMPLETED = "completed"
+    GRADING_FAILED = "grading_failed"
+    PARTIAL = "partial"
 
 
 class SQLQuestionGrading(BaseModel):
@@ -21,6 +31,7 @@ class SQLQuestionGrading(BaseModel):
     optimal_query: bool = Field(description="Whether query is optimized")
     issues: list[str] = Field(default_factory=list, description="List of issues found")
     suggestions: list[str] = Field(default_factory=list, description="Improvement suggestions")
+    grading_error: str | None = Field(default=None, description="Error message if grading failed")
 
 
 class SQLPartGrading(BaseModel):
@@ -57,6 +68,7 @@ class TestingPartGrading(BaseModel):
         description="Test scenarios that were missed",
     )
     suggestions: list[str] = Field(default_factory=list, description="Improvement suggestions")
+    grading_error: str | None = Field(default=None, description="Error message if grading failed")
 
 
 class GradingResult(BaseModel):
@@ -73,6 +85,15 @@ class GradingResult(BaseModel):
     overall_feedback: str = Field(description="Overall feedback and summary")
     strengths: list[str] = Field(default_factory=list, description="Areas of strength")
     improvements: list[str] = Field(default_factory=list, description="Areas to improve")
+
+    status: GradingStatus = Field(
+        default=GradingStatus.COMPLETED,
+        description="Grading status: completed, grading_failed, or partial",
+    )
+    grading_errors: list[str] = Field(
+        default_factory=list,
+        description="List of errors encountered during grading",
+    )
 
 
 class AttemptResultOut(BaseModel):

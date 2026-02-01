@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.schemas.attempt import AnswersPayload
 from app.schemas.grading import (
     GradingResult,
+    GradingStatus,
     SQLPartGrading,
     SQLQuestionGrading,
     TestingPartGrading,
@@ -117,16 +118,17 @@ class GradingService:
             result = await self._call_gemini_api(prompt)
             return SQLQuestionGrading(**result)
         except Exception as e:
+            error_msg = f"Grading API error: {str(e)}"
             logger.error(f"Error grading SQL question: {e}")
-            # Return minimal grading on error
             return SQLQuestionGrading(
                 score=0,
                 correct_syntax=False,
                 logic_correct=False,
                 optimal_query=False,
-                feedback=f"Lỗi hệ thống khi chấm điểm: {str(e)}",
-                issues=["Không thể chấm điểm do lỗi hệ thống"],
+                feedback="Không thể chấm điểm do lỗi hệ thống. Vui lòng liên hệ giảng viên.",
+                issues=["Lỗi hệ thống khi chấm điểm"],
                 suggestions=[],
+                grading_error=error_msg,
             )
 
     async def grade_testing_part(
@@ -177,6 +179,7 @@ class GradingService:
             result = await self._call_gemini_api(prompt)
             return TestingPartGrading(**result)
         except Exception as e:
+            error_msg = f"Grading API error: {str(e)}"
             logger.error(f"Error grading testing part: {e}")
             return TestingPartGrading(
                 technique_score=0,
@@ -185,9 +188,10 @@ class GradingService:
                 test_cases_score=0,
                 coverage_score=0,
                 total_score=0,
-                feedback=f"Lỗi hệ thống khi chấm điểm: {str(e)}",
-                missing_scenarios=["Không thể chấm điểm do lỗi hệ thống"],
+                feedback="Không thể chấm điểm do lỗi hệ thống. Vui lòng liên hệ giảng viên.",
+                missing_scenarios=["Lỗi hệ thống khi chấm điểm"],
                 suggestions=[],
+                grading_error=error_msg,
             )
 
     async def generate_overall_feedback(
@@ -321,6 +325,31 @@ class GradingService:
         percentage = (total_score / 100) * 100
         passed = percentage >= passing_score
 
+        # Collect grading errors and determine status
+        grading_errors: list[str] = []
+        has_sql_error = False
+        has_testing_error = False
+
+        if sql_grading:
+            if sql_grading.question_1 and sql_grading.question_1.grading_error:
+                grading_errors.append(f"SQL Q1: {sql_grading.question_1.grading_error}")
+                has_sql_error = True
+            if sql_grading.question_2 and sql_grading.question_2.grading_error:
+                grading_errors.append(f"SQL Q2: {sql_grading.question_2.grading_error}")
+                has_sql_error = True
+
+        if testing_grading and testing_grading.grading_error:
+            grading_errors.append(f"Testing: {testing_grading.grading_error}")
+            has_testing_error = True
+
+        if grading_errors:
+            if has_sql_error and has_testing_error:
+                status = GradingStatus.GRADING_FAILED
+            else:
+                status = GradingStatus.PARTIAL
+        else:
+            status = GradingStatus.COMPLETED
+
         # Generate overall feedback
         overall_feedback, strengths, improvements = await self.generate_overall_feedback(
             sql_grading=sql_grading,
@@ -339,4 +368,7 @@ class GradingService:
             overall_feedback=overall_feedback,
             strengths=strengths,
             improvements=improvements,
+            status=status,
+            grading_errors=grading_errors,
         )
+
