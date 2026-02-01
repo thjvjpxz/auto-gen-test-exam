@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+env
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Testing
+test/
+tests/
+*.test.py
+conftest.py
+pytest.ini
+
+# Local files
+.env
+.env.local
+*.db
+*.sqlite
+*.sqlite3
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

@@ -1,0 +1,40 @@
+# Render Blueprint - Infrastructure as Code
+# https://render.com/docs/blueprint-spec
+
+services:
+  # FastAPI Backend Service
+  - type: web
+    name: auto-gen-test-exam-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: singapore # Closest to Vietnam
+    plan: free # Free tier: 750 hours/month
+    branch: main
+    autoDeploy: true
+
+    # Health check endpoint
+    healthCheckPath: /api/health
+
+    # Environment variables
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./data/app.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: CORS_ORIGINS
+        sync: false # Set manually in Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false # Set manually in Render dashboard (secret)
+      - key: DEBUG
+        value: "false"
+
+    # Persistent disk for SQLite database
+    disk:
+      name: app-data
+      mountPath: /app/data
+      sizeGB: 1
