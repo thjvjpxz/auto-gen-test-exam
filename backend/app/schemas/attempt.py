@@ -1,10 +1,10 @@
 """Pydantic schemas for exam attempt API requests and responses."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.models.attempt import AttemptStatus
 from app.schemas.exam import ExamDataOut
@@ -94,11 +94,22 @@ class ViolationLogRequest(BaseModel):
 class AttemptStartResponse(BaseModel):
     """Response schema when starting an exam attempt."""
 
+    model_config = ConfigDict(
+        ser_json_timedelta="iso8601",
+    )
+
     attempt_id: int = Field(description="ID of the created attempt")
     exam_id: int = Field(description="ID of the exam")
     started_at: datetime = Field(description="When the attempt started")
     duration: int = Field(description="Exam duration in minutes")
     exam_data: ExamDataOut = Field(description="Exam content for taking")
+
+    @field_serializer("started_at")
+    def serialize_started_at(self, value: datetime) -> str:
+        """Serialize datetime with UTC timezone suffix for frontend parsing."""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.isoformat()
 
 
 class AttemptOut(BaseModel):

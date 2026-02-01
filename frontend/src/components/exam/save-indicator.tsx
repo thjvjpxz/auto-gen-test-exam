@@ -16,27 +16,32 @@ export function SaveIndicator() {
     synced: {
       icon: Check,
       text: "Đã đồng bộ",
-      className: "text-green-600",
+      colorClass: "text-green-600",
+      iconClass: "",
     },
     syncing: {
       icon: RefreshCw,
       text: "Đang lưu...",
-      className: "text-blue-600 animate-spin",
+      colorClass: "text-blue-600",
+      iconClass: "animate-spin",
     },
     offline: {
       icon: CloudOff,
       text: "Offline",
-      className: "text-yellow-600",
+      colorClass: "text-yellow-600",
+      iconClass: "",
     },
     error: {
       icon: AlertCircle,
       text: "Lỗi đồng bộ",
-      className: "text-red-600",
+      colorClass: "text-red-600",
+      iconClass: "",
     },
     idle: {
       icon: Cloud,
       text: "Chờ lưu",
-      className: "text-muted-foreground",
+      colorClass: "text-muted-foreground",
+      iconClass: "",
     },
   };
 
@@ -54,8 +59,8 @@ export function SaveIndicator() {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <Icon className={cn("h-4 w-4", config.className)} />
-      <span className={cn("hidden sm:inline", config.className)}>
+      <Icon className={cn("h-4 w-4", config.colorClass, config.iconClass)} />
+      <span className={cn("hidden sm:inline", config.colorClass)}>
         {config.text}
       </span>
       {serverSyncStatus === "synced" && lastSyncedAt && (

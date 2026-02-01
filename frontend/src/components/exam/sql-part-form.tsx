@@ -31,6 +31,10 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
 
   const sqlAnswers = useMemo(() => answers.sql_part ?? {}, [answers.sql_part]);
 
+  const erdDiagram = sqlPart?.mermaid_code ?? sqlPart?.erd_diagram;
+  const question1 = sqlPart?.questions?.[0] ?? sqlPart?.question_1;
+  const question2 = sqlPart?.questions?.[1] ?? sqlPart?.question_2;
+
   if (!sqlPart) return null;
 
   const handleChange = (key: string, value: string) => {
@@ -49,12 +53,12 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* ERD Diagram */}
-        {sqlPart.erd_diagram && (
+        {erdDiagram && (
           <div className="border rounded-lg p-4 bg-slate-50">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">
               Sơ đồ ERD
             </h3>
-            <MermaidRenderer chart={sqlPart.erd_diagram} />
+            <MermaidRenderer chart={erdDiagram} />
           </div>
         )}
 
@@ -69,7 +73,7 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
         )}
 
         {/* Question 1 */}
-        {sqlPart.question_1 && (
+        {question1 && (
           <div className="space-y-3">
             <div className="flex items-start gap-2">
               <span className="shrink-0 h-5 w-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-medium">
@@ -77,7 +81,7 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
               </span>
               <div>
                 <Label htmlFor="sql_q1" className="text-base font-medium">
-                  {sqlPart.question_1}
+                  {question1}
                 </Label>
                 <p className="text-sm text-muted-foreground mt-1">
                   Điểm tối đa: {sqlPart.question_1_points ?? 25}
@@ -97,7 +101,7 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
         )}
 
         {/* Question 2 */}
-        {sqlPart.question_2 && (
+        {question2 && (
           <div className="space-y-3">
             <div className="flex items-start gap-2">
               <span className="shrink-0 h-5 w-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-medium">
@@ -105,7 +109,7 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
               </span>
               <div>
                 <Label htmlFor="sql_q2" className="text-base font-medium">
-                  {sqlPart.question_2}
+                  {question2}
                 </Label>
                 <p className="text-sm text-muted-foreground mt-1">
                   Điểm tối đa: {sqlPart.question_2_points ?? 25}
