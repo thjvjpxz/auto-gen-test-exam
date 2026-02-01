@@ -17,6 +17,7 @@ import { useFullscreen } from "@/hooks/use-fullscreen";
 import { useViolationMonitor } from "@/hooks/use-violation-monitor";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
 import { useAuthStore } from "@/stores/auth";
+import { toast } from "sonner";
 
 /**
  * Main exam taking page with proctoring and auto-save.
@@ -57,12 +58,39 @@ export default function ExamTakePage() {
   // Handle auto-submit on time up
   const handleTimeUp = useCallback(() => {
     if (attemptId && answers) {
+      const backupKey = `exam_timeup_backup_${attemptId}`;
+      try {
+        localStorage.setItem(
+          backupKey,
+          JSON.stringify({ attemptId, answers, timestamp: Date.now() }),
+        );
+      } catch {
+        console.error("Failed to save backup to localStorage");
+      }
+
       submitExam.mutate(
         { attemptId, answers },
         {
           onSuccess: (data) => {
             clearLocalDraft();
+            localStorage.removeItem(backupKey);
             router.push(`/exams/${examId}/result/${data.attempt_id}`);
+          },
+          onError: (error) => {
+            console.error("Auto-submit failed on time up:", error);
+            localStorage.setItem(
+              `exam_pending_submit_${attemptId}`,
+              JSON.stringify({
+                attemptId,
+                answers,
+                timestamp: Date.now(),
+                error: error.message,
+              }),
+            );
+            toast.error(
+              "Không thể nộp bài tự động khi hết giờ. Bài làm đã được lưu cục bộ. Vui lòng kiểm tra kết nối mạng và thử lại.",
+              { duration: 10000 },
+            );
           },
         },
       );

@@ -1,7 +1,7 @@
 """Exam attempt API endpoints for starting, saving, submitting, and viewing results."""
 
 from datetime import datetime, timezone
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from sqlalchemy import func, select
@@ -11,7 +11,6 @@ from app.models.attempt import AttemptStatus, ExamAttempt
 from app.models.exam import Exam
 from app.models.user import User, UserRole
 from app.schemas.attempt import (
-    AnswersPayload,
     AttemptListOut,
     AttemptListResponse,
     AttemptOut,

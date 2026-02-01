@@ -1,5 +1,4 @@
 import httpx
-import json
 import asyncio
 
 BASE_URL = "http://localhost:8000"

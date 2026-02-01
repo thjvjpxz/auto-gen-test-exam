@@ -20,9 +20,9 @@ export function useAutoSave(attemptId: number | null) {
   const setLastSyncedAt = useExamAttemptStore((s) => s.setLastSyncedAt);
 
   const isOnline = useOnlineStatus();
-  const retryQueueRef = useRef<AnswersPayload[]>([]);
+  const pendingRetryRef = useRef<AnswersPayload | null>(null);
   const answersRef = useRef(answers);
-  const isFirstRender = useRef(true);
+  const previousAttemptIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     answersRef.current = answers;
@@ -32,8 +32,9 @@ export function useAutoSave(attemptId: number | null) {
 
   // Layer 1: localStorage (debounce 500ms)
   useEffect(() => {
-    if (!attemptId || isFirstRender.current) {
-      isFirstRender.current = false;
+    // Skip first render or when attemptId just changed (initialization)
+    if (!attemptId || previousAttemptIdRef.current !== attemptId) {
+      previousAttemptIdRef.current = attemptId;
       return;
     }
 
@@ -53,11 +54,12 @@ export function useAutoSave(attemptId: number | null) {
 
   // Layer 2: Server sync (debounce 3s)
   useEffect(() => {
-    if (!attemptId || isFirstRender.current) return;
+    if (!attemptId || previousAttemptIdRef.current !== attemptId) return;
 
     if (!isOnline) {
       setServerSyncStatus("offline");
-      retryQueueRef.current.push(answers);
+      // Only keep latest answers for retry, not accumulate
+      pendingRetryRef.current = answers;
       return;
     }
 
@@ -68,8 +70,10 @@ export function useAutoSave(attemptId: number | null) {
         await attemptService.saveAnswers(attemptId, answers);
         setServerSyncStatus("synced");
         setLastSyncedAt(new Date().toISOString());
+        pendingRetryRef.current = null;
       } catch {
-        retryQueueRef.current.push(answers);
+        // Only keep latest answers for retry, not accumulate
+        pendingRetryRef.current = answers;
         setServerSyncStatus("error");
       }
     }, SERVER_SYNC_DEBOUNCE);
@@ -77,13 +81,13 @@ export function useAutoSave(attemptId: number | null) {
     return () => clearTimeout(timer);
   }, [answers, attemptId, isOnline, setServerSyncStatus, setLastSyncedAt]);
 
-  // Retry queue processor - runs when back online
+  // Retry processor - runs when back online
   useEffect(() => {
-    if (!isOnline || !attemptId || retryQueueRef.current.length === 0) return;
+    if (!isOnline || !attemptId || !pendingRetryRef.current) return;
 
-    const processQueue = async () => {
+    const processRetry = async () => {
       const latestAnswers = answersRef.current;
-      retryQueueRef.current = [];
+      pendingRetryRef.current = null;
 
       try {
         setServerSyncStatus("syncing");
@@ -91,12 +95,12 @@ export function useAutoSave(attemptId: number | null) {
         setServerSyncStatus("synced");
         setLastSyncedAt(new Date().toISOString());
       } catch {
-        retryQueueRef.current.push(latestAnswers);
+        pendingRetryRef.current = latestAnswers;
         setServerSyncStatus("error");
       }
     };
 
-    processQueue();
+    processRetry();
   }, [isOnline, attemptId, setServerSyncStatus, setLastSyncedAt]);
 
   // Save before unload

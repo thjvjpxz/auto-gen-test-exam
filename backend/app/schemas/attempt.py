@@ -2,11 +2,22 @@
 
 from datetime import datetime
 from typing import Any
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.attempt import AttemptStatus
 from app.schemas.exam import ExamDataOut
+
+
+class ViolationType(str, Enum):
+    """Valid violation types for proctoring."""
+
+    TAB_SWITCH = "tab_switch"
+    FULLSCREEN_EXIT = "fullscreen_exit"
+    COPY = "copy"
+    PASTE = "paste"
+    DEVTOOLS_OPEN = "devtools_open"
 
 
 class TestCaseItem(BaseModel):
@@ -73,7 +84,7 @@ class AttemptSubmitRequest(BaseModel):
 class ViolationLogRequest(BaseModel):
     """Request schema for logging a violation event."""
 
-    violation_type: str = Field(
+    violation_type: ViolationType = Field(
         description="Type of violation: tab_switch, fullscreen_exit, copy, paste, devtools_open",
     )
     timestamp: str = Field(description="ISO timestamp when violation occurred")
