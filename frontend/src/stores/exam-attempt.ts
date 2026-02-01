@@ -15,6 +15,12 @@ interface ViolationLog {
 type SaveStatus = "idle" | "saving" | "saved";
 type SyncStatus = "idle" | "syncing" | "synced" | "offline" | "error";
 
+const VIOLATION_THRESHOLDS = {
+  LOW_WARNING: 1,
+  HIGH_WARNING: 3,
+  FORCE_SUBMIT: 5,
+} as const;
+
 interface ExamAttemptState {
   attemptId: number | null;
   examData: ExamData | null;
@@ -27,6 +33,7 @@ interface ExamAttemptState {
   violations: ViolationLog[];
   trustScore: number;
   warningLevel: WarningLevel;
+  shouldForceSubmit: boolean;
 
   initAttempt: (data: {
     attemptId: number;
@@ -43,6 +50,7 @@ interface ExamAttemptState {
   setLastSyncedAt: (timestamp: string) => void;
   addViolation: (violation: ViolationLog) => void;
   updateTrustScore: (score: number, level: WarningLevel) => void;
+  clearForceSubmit: () => void;
   reset: () => void;
 }
 
@@ -58,7 +66,20 @@ const initialState = {
   violations: [] as ViolationLog[],
   trustScore: 100,
   warningLevel: "none" as WarningLevel,
+  shouldForceSubmit: false,
 };
+
+/**
+ * Calculates warning level based on violation count.
+ * Per spec: 1-2 = low/medium, 3-4 = high, 5+ = critical (force submit)
+ */
+function calculateWarningLevel(count: number): WarningLevel {
+  if (count >= VIOLATION_THRESHOLDS.FORCE_SUBMIT) return "critical";
+  if (count >= VIOLATION_THRESHOLDS.HIGH_WARNING) return "high";
+  if (count >= VIOLATION_THRESHOLDS.LOW_WARNING + 1) return "medium";
+  if (count >= VIOLATION_THRESHOLDS.LOW_WARNING) return "low";
+  return "none";
+}
 
 /**
  * Zustand store for exam attempt state management.
@@ -85,6 +106,7 @@ export const useExamAttemptStore = create<ExamAttemptState>((set) => ({
       violations: [],
       trustScore: 100,
       warningLevel: "none",
+      shouldForceSubmit: false,
     }),
 
   updateSqlAnswer: (questionKey, value) =>
@@ -127,12 +149,23 @@ export const useExamAttemptStore = create<ExamAttemptState>((set) => ({
   setLastSyncedAt: (timestamp) => set({ lastSyncedAt: timestamp }),
 
   addViolation: (violation) =>
-    set((state) => ({
-      violations: [...state.violations, violation],
-    })),
+    set((state) => {
+      const newViolations = [...state.violations, violation];
+      const count = newViolations.length;
+      const newWarningLevel = calculateWarningLevel(count);
+      const shouldForce = count >= VIOLATION_THRESHOLDS.FORCE_SUBMIT;
+
+      return {
+        violations: newViolations,
+        warningLevel: newWarningLevel,
+        shouldForceSubmit: shouldForce,
+      };
+    }),
 
   updateTrustScore: (score, level) =>
     set({ trustScore: score, warningLevel: level }),
+
+  clearForceSubmit: () => set({ shouldForceSubmit: false }),
 
   reset: () => set(initialState),
 }));

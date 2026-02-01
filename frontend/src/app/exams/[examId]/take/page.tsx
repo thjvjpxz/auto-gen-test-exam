@@ -10,6 +10,7 @@ import { SqlPartForm } from "@/components/exam/sql-part-form";
 import { TestingPartForm } from "@/components/exam/testing-part-form";
 import { ViolationWarning } from "@/components/exam/violation-warning";
 import { SubmitConfirmDialog } from "@/components/exam/submit-confirm-dialog";
+import { ViolationBlockingDialog } from "@/components/exam/violation-blocking-dialog";
 import { useStartExam, useSubmitExam } from "@/hooks/attempt";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useExamTimer } from "@/hooks/use-exam-timer";
@@ -30,6 +31,8 @@ export default function ExamTakePage() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [dismissedWarning, setDismissedWarning] = useState(false);
+  const [showBlockingDialog, setShowBlockingDialog] = useState(false);
+  const [acknowledgedHighWarning, setAcknowledgedHighWarning] = useState(false);
 
   const { isAuthenticated, isLoading: authLoading } = useAuthStore();
   const startExam = useStartExam();
@@ -41,6 +44,9 @@ export default function ExamTakePage() {
   const duration = useExamAttemptStore((s) => s.duration);
   const answers = useExamAttemptStore((s) => s.answers);
   const warningLevel = useExamAttemptStore((s) => s.warningLevel);
+  const violations = useExamAttemptStore((s) => s.violations);
+  const shouldForceSubmit = useExamAttemptStore((s) => s.shouldForceSubmit);
+  const clearForceSubmit = useExamAttemptStore((s) => s.clearForceSubmit);
 
   // Auto-save hook
   const { recoverFromLocal, clearLocalDraft } = useAutoSave(attemptId);
@@ -147,17 +153,95 @@ export default function ExamTakePage() {
   }, [attemptId, recoverFromLocal]);
 
   // Handle fullscreen exit violation
+  const wasFullscreenRef = useRef(false);
   useEffect(() => {
-    if (attemptId && !isFullscreen && !showFullscreenPrompt && isSupported) {
+    const wasFullscreen = wasFullscreenRef.current;
+    wasFullscreenRef.current = isFullscreen;
+
+    if (
+      attemptId &&
+      wasFullscreen &&
+      !isFullscreen &&
+      !showFullscreenPrompt &&
+      isSupported
+    ) {
       reportViolation("fullscreen_exit", "User exited fullscreen mode");
     }
+  }, [isFullscreen, attemptId, showFullscreenPrompt, isSupported]);
+
+  // Handle warning level changes - show blocking dialog for high warnings
+  const prevWarningLevelRef = useRef(warningLevel);
+  useEffect(() => {
+    const prevLevel = prevWarningLevelRef.current;
+    prevWarningLevelRef.current = warningLevel;
+
+    // Show toast for low/medium warnings
+    if (warningLevel === "low" && prevLevel === "none") {
+      toast.warning("Cảnh báo: Đã phát hiện hành vi bất thường.", {
+        duration: 4000,
+      });
+    } else if (warningLevel === "medium" && prevLevel === "low") {
+      toast.warning(
+        "Cảnh báo: Số lần vi phạm đang tăng. Vui lòng tập trung làm bài.",
+        {
+          duration: 5000,
+        },
+      );
+    }
+
+    // Show blocking dialog for high warning (3-4 violations)
+    if (warningLevel === "high" && !acknowledgedHighWarning) {
+      setShowBlockingDialog(true);
+    }
+  }, [warningLevel, acknowledgedHighWarning]);
+
+  // Handle auto-submit when violations reach critical threshold (5+)
+  const forceSubmitTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (
+      shouldForceSubmit &&
+      attemptId &&
+      answers &&
+      !forceSubmitTriggeredRef.current
+    ) {
+      forceSubmitTriggeredRef.current = true;
+
+      toast.error("Bài thi đang được tự động nộp do vi phạm quá nhiều lần.", {
+        duration: 5000,
+      });
+
+      submitExam.mutate(
+        { attemptId, answers },
+        {
+          onSuccess: (data) => {
+            clearLocalDraft();
+            clearForceSubmit();
+            router.push(`/exams/${examId}/result/${data.attempt_id}`);
+          },
+          onError: () => {
+            forceSubmitTriggeredRef.current = false;
+            toast.error(
+              "Không thể tự động nộp bài. Vui lòng thử nộp bài thủ công.",
+            );
+          },
+        },
+      );
+    }
   }, [
-    isFullscreen,
+    shouldForceSubmit,
     attemptId,
-    showFullscreenPrompt,
-    isSupported,
-    reportViolation,
+    answers,
+    submitExam,
+    clearLocalDraft,
+    clearForceSubmit,
+    router,
+    examId,
   ]);
+
+  const handleAcknowledgeViolation = () => {
+    setShowBlockingDialog(false);
+    setAcknowledgedHighWarning(true);
+  };
 
   const handleEnterFullscreen = async () => {
     await enterFullscreen();
@@ -296,6 +380,13 @@ export default function ExamTakePage() {
         onConfirm={handleConfirmSubmit}
         isSubmitting={submitExam.isPending}
         remainingTime={formattedTime}
+      />
+
+      {/* Violation Blocking Dialog - shown at 3-4 violations */}
+      <ViolationBlockingDialog
+        open={showBlockingDialog}
+        onAcknowledge={handleAcknowledgeViolation}
+        remainingWarnings={5 - violations.length}
       />
     </div>
   );

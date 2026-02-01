@@ -4,18 +4,33 @@ import { useExamAttemptStore } from "@/stores/exam-attempt";
 import type { ViolationType, ViolationRequest } from "@/types";
 
 /**
- * Violation monitoring hook.
- * Detects: tab switch, window blur, copy, paste, devtools.
+ * Violation monitoring hook with session-based tracking.
+ * Only counts one violation per "leave page" session.
+ * Resets when user returns to the page.
  */
 export function useViolationMonitor(attemptId: number | null) {
   const logViolation = useLogViolation();
   const addViolation = useExamAttemptStore((s) => s.addViolation);
   const warningLevel = useExamAttemptStore((s) => s.warningLevel);
-  const isActive = useRef(true);
+
+  const isActiveRef = useRef(true);
+  const attemptIdRef = useRef(attemptId);
+  const addViolationRef = useRef(addViolation);
+  const logViolationRef = useRef(logViolation);
+
+  // Track if user has left the page (to avoid duplicate violations)
+  const hasLeftPageRef = useRef(false);
+
+  useEffect(() => {
+    isActiveRef.current = true;
+    attemptIdRef.current = attemptId;
+    addViolationRef.current = addViolation;
+    logViolationRef.current = logViolation;
+  }, [attemptId, addViolation, logViolation]);
 
   const reportViolation = useCallback(
     (type: ViolationType, details?: string) => {
-      if (!isActive.current) return;
+      if (!isActiveRef.current) return;
 
       const violation: ViolationRequest = {
         violation_type: type,
@@ -23,39 +38,74 @@ export function useViolationMonitor(attemptId: number | null) {
         details,
       };
 
-      addViolation({ type, timestamp: violation.timestamp, details });
+      addViolationRef.current({
+        type,
+        timestamp: violation.timestamp,
+        details,
+      });
 
-      if (attemptId) {
-        logViolation.mutate({ attemptId, violation });
+      if (attemptIdRef.current) {
+        logViolationRef.current.mutate({
+          attemptId: attemptIdRef.current,
+          violation,
+        });
       }
     },
-    [attemptId, logViolation, addViolation],
+    [],
   );
+
+  /**
+   * Handle page leave - only report once per leave session.
+   * Combines tab_switch and window_blur into single "leave" violation.
+   */
+  const handlePageLeave = useCallback(
+    (type: ViolationType, details: string) => {
+      if (!hasLeftPageRef.current) {
+        hasLeftPageRef.current = true;
+        reportViolation(type, details);
+      }
+    },
+    [reportViolation],
+  );
+
+  const handlePageReturn = useCallback(() => {
+    hasLeftPageRef.current = false;
+  }, []);
 
   // Tab switch / visibility change
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        reportViolation("tab_switch", "User switched to another tab");
+        handlePageLeave("tab_switch", "User switched to another tab");
+      } else {
+        handlePageReturn();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [reportViolation]);
+  }, [handlePageLeave, handlePageReturn]);
 
-  // Window blur
+  // Window blur/focus
   useEffect(() => {
     const handleBlur = () => {
-      reportViolation("window_blur", "Window lost focus");
+      handlePageLeave("window_blur", "Window lost focus");
+    };
+
+    const handleFocus = () => {
+      handlePageReturn();
     };
 
     window.addEventListener("blur", handleBlur);
-    return () => window.removeEventListener("blur", handleBlur);
-  }, [reportViolation]);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [handlePageLeave, handlePageReturn]);
 
-  // Copy/Paste detection
+  // Copy/Paste detection - these are always counted individually
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
       e.preventDefault();
@@ -76,7 +126,6 @@ export function useViolationMonitor(attemptId: number | null) {
     };
   }, [reportViolation]);
 
-  // DevTools detection (basic resize heuristic)
   useEffect(() => {
     const threshold = 160;
     let devToolsOpen = false;
@@ -98,10 +147,9 @@ export function useViolationMonitor(attemptId: number | null) {
     return () => window.removeEventListener("resize", checkDevTools);
   }, [reportViolation]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      isActive.current = false;
+      isActiveRef.current = false;
     };
   }, []);
 

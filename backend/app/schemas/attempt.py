@@ -18,6 +18,7 @@ class ViolationType(str, Enum):
     COPY = "copy"
     PASTE = "paste"
     DEVTOOLS_OPEN = "devtools_open"
+    WINDOW_BLUR = "window_blur"
 
 
 class TestCaseItem(BaseModel):
@@ -205,6 +206,8 @@ class ViolationLogResponse(BaseModel):
     tab_switch_count: int
     fullscreen_exit_count: int
     copy_paste_count: int
+    window_blur_count: int
+    devtools_open_count: int
     warning_level: str = Field(
         description="Warning level: none, low, medium, high, critical",
     )

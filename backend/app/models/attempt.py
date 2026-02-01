@@ -30,7 +30,6 @@ class ExamAttempt(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    # Foreign keys
     exam_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("exams.id", ondelete="CASCADE"),
@@ -64,9 +63,12 @@ class ExamAttempt(Base, TimestampMixin):
         nullable=True,
     )
 
+    # Violation counters
     tab_switch_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     fullscreen_exit_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     copy_paste_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    window_blur_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    devtools_open_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     violation_logs: Mapped[list[dict[str, Any]] | None] = mapped_column(
         JSONText,
@@ -100,6 +102,8 @@ class ExamAttempt(Base, TimestampMixin):
         - tab_switch: -10 points each
         - fullscreen_exit: -8 points each
         - copy_paste: -12 points each
+        - window_blur: -5 points each
+        - devtools_open: -15 points each
 
         Returns:
             Trust score between 0 and 100.
@@ -108,8 +112,20 @@ class ExamAttempt(Base, TimestampMixin):
             self.tab_switch_count * 10
             + self.fullscreen_exit_count * 8
             + self.copy_paste_count * 12
+            + self.window_blur_count * 5
+            + self.devtools_open_count * 15
         )
         return max(0, 100 - deductions)
+
+    def get_total_violation_count(self) -> int:
+        """Get total number of violations across all types."""
+        return (
+            self.tab_switch_count
+            + self.fullscreen_exit_count
+            + self.copy_paste_count
+            + self.window_blur_count
+            + self.devtools_open_count
+        )
 
     def add_violation(
         self,
@@ -120,7 +136,7 @@ class ExamAttempt(Base, TimestampMixin):
         """Add a violation to the logs and update counters.
 
         Args:
-            violation_type: Type of violation (tab_switch, fullscreen_exit, copy_paste, etc.)
+            violation_type: Type of violation.
             timestamp: ISO timestamp of the violation.
             details: Additional details about the violation.
         """
@@ -139,5 +155,10 @@ class ExamAttempt(Base, TimestampMixin):
             self.fullscreen_exit_count += 1
         elif violation_type in ("copy", "paste", "copy_paste"):
             self.copy_paste_count += 1
+        elif violation_type == "window_blur":
+            self.window_blur_count += 1
+        elif violation_type == "devtools_open":
+            self.devtools_open_count += 1
 
         self.trust_score = self.calculate_trust_score()
+

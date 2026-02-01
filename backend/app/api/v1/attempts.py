@@ -11,6 +11,7 @@ from app.models.attempt import AttemptStatus, ExamAttempt
 from app.models.exam import Exam
 from app.models.user import User, UserRole
 from app.schemas.attempt import (
+    AnswersPayload,
     AttemptListOut,
     AttemptListResponse,
     AttemptOut,
@@ -184,12 +185,59 @@ async def start_exam_attempt(
         .where(ExamAttempt.exam_id == exam_id)
         .where(ExamAttempt.user_id == current_user.id)
         .where(ExamAttempt.status == AttemptStatus.IN_PROGRESS)
+        .order_by(ExamAttempt.started_at.desc())
     )
     existing_result = await db.execute(existing_stmt)
-    existing_attempt = existing_result.scalar_one_or_none()
+    existing_attempt = existing_result.scalars().first()
 
     if existing_attempt:
-        # Return existing attempt instead of creating new one
+        started_at = existing_attempt.started_at
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        
+        now = datetime.now(timezone.utc)
+        elapsed_seconds = (now - started_at).total_seconds()
+        duration_seconds = exam.duration * 60
+        
+        if elapsed_seconds >= duration_seconds:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Thời gian làm bài đã hết. Vui lòng bắt đầu lượt thi mới.",
+            )
+        total_violations = existing_attempt.get_total_violation_count()
+        if total_violations >= 5:
+            existing_attempt.submitted_at = datetime.now(timezone.utc)
+            existing_attempt.time_taken = int(elapsed_seconds)
+            
+            current_answers = existing_attempt.answers_json or {}
+            answers_payload = AnswersPayload(**current_answers)
+            
+            try:
+                grading_service = GradingService()
+                grading_result = await grading_service.grade_attempt(
+                    exam_data=exam.exam_data_json,
+                    answers=answers_payload,
+                    passing_score=exam.passing_score,
+                )
+                
+                existing_attempt.score = grading_result.total_score
+                existing_attempt.max_score = grading_result.max_score
+                existing_attempt.percentage = grading_result.percentage
+                existing_attempt.ai_grading_json = grading_result.model_dump()
+            except Exception:
+                existing_attempt.score = 0
+                existing_attempt.percentage = 0
+            
+            existing_attempt.status = AttemptStatus.GRADED
+            existing_attempt.updated_at = datetime.now(timezone.utc)
+            
+            await db.commit()
+            
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Bạn đã vi phạm quá nhiều lần ({total_violations} lần). Bài thi đã được tự động nộp. Xem kết quả tại trang kết quả.",
+            )
+        
         return AttemptStartResponse(
             attempt_id=existing_attempt.id,
             exam_id=exam.id,
@@ -402,12 +450,7 @@ async def submit_exam_attempt(
     await db.commit()
     await db.refresh(attempt)
 
-    # Calculate violation count
-    violation_count = (
-        attempt.tab_switch_count
-        + attempt.fullscreen_exit_count
-        + attempt.copy_paste_count
-    )
+    violation_count = attempt.get_total_violation_count()
 
     return AttemptResultOut(
         attempt_id=attempt.id,
@@ -493,11 +536,7 @@ async def get_attempt_result(
     if attempt.ai_grading_json:
         grading = GradingResult(**attempt.ai_grading_json)
 
-    violation_count = (
-        attempt.tab_switch_count
-        + attempt.fullscreen_exit_count
-        + attempt.copy_paste_count
-    )
+    violation_count = attempt.get_total_violation_count()
 
     return AttemptResultOut(
         attempt_id=attempt.id,
@@ -690,11 +729,7 @@ async def log_violation(
     await db.refresh(attempt)
 
     # Determine warning level
-    total_violations = (
-        attempt.tab_switch_count
-        + attempt.fullscreen_exit_count
-        + attempt.copy_paste_count
-    )
+    total_violations = attempt.get_total_violation_count()
 
     warning_level = "none"
     message = None
@@ -718,6 +753,8 @@ async def log_violation(
         tab_switch_count=attempt.tab_switch_count,
         fullscreen_exit_count=attempt.fullscreen_exit_count,
         copy_paste_count=attempt.copy_paste_count,
+        window_blur_count=attempt.window_blur_count,
+        devtools_open_count=attempt.devtools_open_count,
         warning_level=warning_level,
         message=message,
     )
