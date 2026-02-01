@@ -51,6 +51,8 @@ export function LandingNavbar() {
           className="cursor-pointer p-2 md:hidden"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label={isMenuOpen ? "Đóng menu" : "Mở menu"}
+          aria-expanded={isMenuOpen}
+          aria-controls="mobile-menu"
         >
           {isMenuOpen ? (
             <X className="size-5 text-foreground" />
@@ -61,7 +63,10 @@ export function LandingNavbar() {
       </nav>
 
       {isMenuOpen && (
-        <div className="mt-2 rounded-lg border border-border bg-card p-4 md:hidden">
+        <div
+          id="mobile-menu"
+          className="mt-2 rounded-lg border border-border bg-card p-4 md:hidden"
+        >
           <div className="flex flex-col gap-3">
             {NAV_LINKS.map((link) => (
               <a

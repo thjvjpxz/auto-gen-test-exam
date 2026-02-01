@@ -36,7 +36,7 @@ export function HowItWorksSection() {
           <div className="absolute left-8 top-0 hidden h-full w-px bg-border md:block" />
 
           <div className="space-y-12">
-            {STEPS.map((step, index) => (
+            {STEPS.map((step) => (
               <div key={step.number} className="relative flex gap-6 md:gap-12">
                 <div className="relative z-10 flex size-16 shrink-0 items-center justify-center rounded-lg border-2 border-primary bg-card font-heading text-xl font-bold text-primary">
                   {step.number}
