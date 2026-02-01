@@ -6,11 +6,11 @@ services:
   - type: web
     name: auto-gen-test-exam-api
     runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     region: singapore # Closest to Vietnam
     plan: free # Free tier: 750 hours/month
-    branch: main
+    branch: develop
     autoDeploy: true
 
     # Health check endpoint
