@@ -30,13 +30,29 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
-      if (typeof window !== "undefined") {
+      const isAuthEndpoint =
+        error.config?.url?.includes("/auth/login") ||
+        error.config?.url?.includes("/auth/register");
+
+      if (!isAuthEndpoint && typeof window !== "undefined") {
         localStorage.removeItem("access_token");
         window.location.href = "/login";
       }
     }
 
-    return Promise.reject(error);
+    // Extract error message from API response 
+    const responseData = error.response?.data as
+      | { detail?: string; message?: string }
+      | undefined;
+    const apiErrorMessage =
+      responseData?.detail ||
+      responseData?.message ||
+      error.message ||
+      "Đã có lỗi xảy ra";
+
+    // Create new Error with API message
+    const enhancedError = new Error(apiErrorMessage);
+    return Promise.reject(enhancedError);
   },
 );
 

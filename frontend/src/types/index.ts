@@ -1,8 +1,10 @@
-export type UserRole = "teacher" | "student";
+export type UserRole = "user" | "admin";
 
 export type ExamType = "sql_testing" | "sql_only" | "testing_only";
 
 export type ExamAttemptStatus = "in_progress" | "submitted" | "graded";
+
+export type TaskStatus = "pending" | "completed" | "failed";
 
 export type ViolationType =
   | "tab_switch"
@@ -13,13 +15,23 @@ export type ViolationType =
   | "mouse_leave"
   | "window_blur";
 
+// UserOut từ OpenAPI spec (backend response)
+export interface UserOut {
+  id: number;
+  email: string;
+  name: string;
+  role: UserRole;
+  avatar_url: string | null;
+}
+
+// User interface cho frontend (có thể extend từ UserOut)
 export interface User {
   id: number;
   email: string;
   name: string;
   role: UserRole;
   avatarUrl?: string;
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -145,14 +157,42 @@ export interface ExamAttempt {
   userAgent?: string;
 }
 
-export interface AuthResponse {
+// TokenResponse
+export interface TokenResponse {
   access_token: string;
   token_type: string;
-  user: User;
+  user: UserOut;
+}
+
+export type AuthResponse = TokenResponse;
+
+// Request types từ OpenAPI spec
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
+// Error types
+export interface ValidationError {
+  loc: (string | number)[];
+  msg: string;
+  type: string;
+  input?: unknown;
+  ctx?: Record<string, unknown>;
+}
+
+export interface HTTPValidationError {
+  detail: ValidationError[] | string;
 }
 
 export interface ApiError {
-  detail: string;
+  detail: string | ValidationError[];
   statusCode?: number;
 }
 
@@ -165,16 +205,104 @@ export interface PaginatedResponse<T> {
 }
 
 export interface ExamGenerateRequest {
-  examType: ExamType;
-  customDomain?: string;
-  difficulty?: "basic" | "intermediate" | "advanced";
+  exam_type?: ExamType;
+  duration?: number;
+  passing_score?: number;
+  subject?: string | null;
 }
 
-export interface TaskStatus {
-  taskId: string;
-  status: "pending" | "processing" | "completed" | "failed";
-  result?: Exam;
+export interface GenerationTaskResponse {
+  task_id: string;
+  status: TaskStatus;
+}
+
+export interface RuleTableItem {
+  condition: string;
+  result: string;
+}
+
+export interface ExamSQLPart {
+  mermaid_code?: string;
+  erd_diagram?: string;
+  context?: string;
+  questions?: string[];
+  question_1?: string;
+  question_2?: string;
+  question_1_points?: number;
+  question_2_points?: number;
+}
+
+export interface ExamTestingPart {
+  scenario?: string;
+  requirements?: string[];
+  rules_table?: RuleTableItem[];
+  question?: string;
+  max_points?: number;
+}
+
+export interface ExamData {
+  title?: string;
+  sql_part?: ExamSQLPart;
+  testing_part?: ExamTestingPart;
+}
+
+export interface ExamSettings {
+  allow_review?: boolean;
+  show_sample_solution?: boolean;
+  max_attempts?: number;
+}
+
+export interface ExamOut {
+  id: number;
+  title: string;
+  exam_type: ExamType;
+  subject: string | null;
+  created_by: number;
+  duration: number;
+  passing_score: number;
+  exam_data: ExamData;
+  ai_generated: boolean;
+  gemini_model: string;
+  settings: ExamSettings | null;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface ExamListItem {
+  id: number;
+  title: string;
+  exam_type: ExamType;
+  subject: string | null;
+  created_by: number;
+  duration: number;
+  passing_score: number;
+  ai_generated: boolean;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface ExamListResponse {
+  items: ExamListItem[];
+  exams?: ExamOut[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+export interface GenerationStatusResponse {
+  status: TaskStatus;
+  progress?: number;
+  exam_id?: number;
+  exam?: ExamOut;
   error?: string;
+}
+
+export interface ExamListParams {
+  skip?: number;
+  limit?: number;
+  exam_type?: ExamType;
+  is_published?: boolean;
 }
 
 export interface LoginFormData {
@@ -187,5 +315,166 @@ export interface RegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  role: UserRole;
+}
+
+export interface ExamGenerateFormData {
+  exam_type: ExamType;
+  duration: number;
+  passing_score: number;
+  subject?: string;
+}
+
+// ========== ATTEMPT API TYPES ==========
+
+export type AttemptStatus = "in_progress" | "graded";
+export type WarningLevel = "none" | "low" | "medium" | "high" | "critical";
+
+/** Response from POST /exams/{exam_id}/start */
+export interface AttemptStartResponse {
+  attempt_id: number;
+  exam_id: number;
+  started_at: string;
+  duration: number;
+  exam_data: ExamData;
+}
+
+/** Response from PATCH /attempts/{attempt_id}/save */
+export interface AttemptSaveResponse {
+  id: number;
+  exam_id: number;
+  user_id: number;
+  status: AttemptStatus;
+  answers: AnswersPayload;
+  score: number;
+  max_score: number;
+  percentage: number | null;
+  tab_switch_count: number;
+  fullscreen_exit_count: number;
+  copy_paste_count: number;
+  trust_score: number;
+  started_at: string;
+  submitted_at: string | null;
+  time_taken: number | null;
+  created_at: string;
+}
+
+/** Request body for POST /attempts/{attempt_id}/violations */
+export interface ViolationRequest {
+  violation_type: ViolationType;
+  timestamp: string;
+  details?: string;
+}
+
+/** Response from POST /attempts/{attempt_id}/violations */
+export interface ViolationResponse {
+  success: boolean;
+  trust_score: number;
+  tab_switch_count: number;
+  fullscreen_exit_count: number;
+  copy_paste_count: number;
+  warning_level: WarningLevel;
+  message?: string;
+}
+
+/** Answers payload for save/submit */
+export interface AnswersPayload {
+  sql_part?: {
+    question_1_answer?: string | null;
+    question_2_answer?: string | null;
+  } | null;
+  testing_part?: {
+    technique?: string | null;
+    explanation?: string | null;
+    test_cases?: TestCaseItem[];
+  } | null;
+}
+
+export interface TestCaseItem {
+  input: string;
+  expected_output: string;
+  actual_result?: string | null;
+}
+
+/** Response from POST /attempts/{attempt_id}/submit and GET /attempts/{attempt_id}/result */
+export interface ExamSubmitResponse {
+  attempt_id: number;
+  exam_id: number;
+  exam_title: string;
+  user_id: number;
+  started_at: string;
+  submitted_at: string;
+  time_taken: number;
+  score: number;
+  max_score: number;
+  percentage: number;
+  passed: boolean;
+  trust_score: number;
+  violation_count: number;
+  flagged_for_review: boolean;
+  grading: ExamGrading;
+}
+
+export interface ExamGrading {
+  sql_part?: SqlPartGrading;
+  testing_part?: TestingPartGradingResult;
+  total_score: number;
+  max_score: number;
+  percentage: number;
+  passed: boolean;
+  overall_feedback: string;
+  strengths: string[];
+  improvements: string[];
+}
+
+export interface SqlPartGrading {
+  question_1?: SqlQuestionGradingResult;
+  question_2?: SqlQuestionGradingResult;
+  total_score: number;
+  max_score: number;
+}
+
+export interface SqlQuestionGradingResult {
+  score: number;
+  max_score: number;
+  feedback: string;
+  correct_syntax: boolean;
+  logic_correct: boolean;
+  optimal_query: boolean;
+  issues?: string[];
+  suggestions?: string[];
+}
+
+export interface TestingPartGradingResult {
+  technique_score: number;
+  technique_correct: boolean;
+  explanation_score: number;
+  test_cases_score: number;
+  coverage_score: number;
+  total_score: number;
+  max_score: number;
+  feedback: string;
+  missing_scenarios?: string[];
+  suggestions?: string[];
+}
+
+export interface UserAttemptHistoryItem {
+  id: number;
+  exam_id: number;
+  exam_title: string;
+  exam_type: ExamType;
+  status: ExamAttemptStatus;
+  score: number;
+  max_score: number;
+  percentage: number | null;
+  passed: boolean;
+  passing_score: number;
+  trust_score: number;
+  started_at: string;
+  submitted_at: string | null;
+  time_taken: number | null;
+}
+
+export interface UserAttemptHistoryResponse {
+  items: UserAttemptHistoryItem[];
+  total: number;
 }

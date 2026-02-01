@@ -1,22 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Loader2,
-  Mail,
-  Lock,
-  User,
-  GraduationCap,
-  UserCheck,
-  Users,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Mail } from "lucide-react";
+import { Lock } from "lucide-react";
+import { User } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -34,58 +28,53 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { registerSchema, type RegisterFormData } from "@/lib/validations/auth";
-import { authService } from "@/services/auth";
-import { useAuthStore } from "@/stores/auth";
+import { useRegister } from "@/hooks/auth";
+import {
+  extractErrorMessage,
+  extractValidationErrors,
+  setFormValidationErrors,
+} from "@/lib/errors";
 import { env } from "@/config/env";
-import type { UserRole } from "@/types";
+
+const FORM_DEFAULT_VALUES: RegisterFormData = {
+  name: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+};
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const { setUser, setToken } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  const registerMutation = useRegister();
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      role: "student",
-    },
+    defaultValues: FORM_DEFAULT_VALUES,
   });
 
-  const onSubmit = async (data: RegisterFormData) => {
-    setIsLoading(true);
-    setError(null);
+  const onSubmit = useCallback(
+    (data: RegisterFormData) => {
+      registerMutation.mutate(data, {
+        onError: (error) => {
+          setFormValidationErrors(form, error);
+        },
+      });
+    },
+    [registerMutation, form],
+  );
 
-    try {
-      const response = await authService.register(data);
-      setToken(response.access_token);
-      setUser(response.user);
-
-      if (response.user.role === "teacher") {
-        router.push("/dashboard/teacher");
-      } else {
-        router.push("/dashboard/student");
-      }
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail || "Đăng ký thất bại. Vui lòng thử lại.";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+  const errorMessage = useMemo(() => {
+    if (!registerMutation.error) return null;
+    const validationErrors = extractValidationErrors(registerMutation.error);
+    if (validationErrors && validationErrors.length > 0) {
+      return null;
     }
-  };
+    return extractErrorMessage(
+      registerMutation.error,
+      "Đăng ký thất bại. Vui lòng thử lại.",
+    );
+  }, [registerMutation.error]);
+
+  const isPending = registerMutation.isPending;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4 py-8">
@@ -110,11 +99,11 @@ export default function RegisterPage() {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-4"
               >
-                {error && (
+                {errorMessage ? (
                   <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-                    {error}
+                    {errorMessage}
                   </div>
-                )}
+                ) : null}
 
                 <FormField
                   control={form.control}
@@ -129,7 +118,7 @@ export default function RegisterPage() {
                             type="text"
                             placeholder="Nguyễn Văn A"
                             className="pl-9"
-                            disabled={isLoading}
+                            disabled={isPending}
                             {...field}
                           />
                         </div>
@@ -152,52 +141,11 @@ export default function RegisterPage() {
                             type="email"
                             placeholder="name@example.com"
                             className="pl-9"
-                            disabled={isLoading}
+                            disabled={isPending}
                             {...field}
                           />
                         </div>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Vai trò</FormLabel>
-                      <Select
-                        onValueChange={(value: UserRole) =>
-                          field.onChange(value)
-                        }
-                        defaultValue={field.value}
-                        disabled={isLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Chọn vai trò" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="student">
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4" />
-                              <span>Học sinh</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="teacher">
-                            <div className="flex items-center gap-2">
-                              <UserCheck className="h-4 w-4" />
-                              <span>Giáo viên</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Chọn vai trò của bạn trong hệ thống
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -216,13 +164,13 @@ export default function RegisterPage() {
                             type="password"
                             placeholder="••••••••"
                             className="pl-9"
-                            disabled={isLoading}
+                            disabled={isPending}
                             {...field}
                           />
                         </div>
                       </FormControl>
                       <FormDescription>
-                        Tối thiểu 6 ký tự, bao gồm chữ hoa, chữ thường và số
+                        Tối thiểu 8 ký tự, bao gồm cả chữ và số
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -242,7 +190,7 @@ export default function RegisterPage() {
                             type="password"
                             placeholder="••••••••"
                             className="pl-9"
-                            disabled={isLoading}
+                            disabled={isPending}
                             {...field}
                           />
                         </div>
@@ -255,10 +203,10 @@ export default function RegisterPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isPending}
                   size="lg"
                 >
-                  {isLoading ? (
+                  {isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Đang xử lý...

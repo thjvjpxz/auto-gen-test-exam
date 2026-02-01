@@ -1,18 +1,22 @@
 import enum
+from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.sql import func
+from sqlalchemy import Enum, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.attempt import ExamAttempt
+    from app.models.exam import Exam
 
 
 class UserRole(str, enum.Enum):
-    TEACHER = "teacher"
-    STUDENT = "student"
+    USER = "user"
+    ADMIN = "admin"
 
 
-class User(Base):
+class User(Base, TimestampMixin):
     """Model user ứng với bảng users."""
 
     __tablename__ = "users"
@@ -26,13 +30,16 @@ class User(Base):
         nullable=False,
     )
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
+    
+    # Relationships
+    exams: Mapped[list["Exam"]] = relationship(
+        "Exam",
+        back_populates="creator",
+        cascade="all, delete-orphan",
     )
-    updated_at: Mapped[DateTime | None] = mapped_column(
-        DateTime(timezone=True),
-        onupdate=func.now(),
-        nullable=True,
+    attempts: Mapped[list["ExamAttempt"]] = relationship(
+        "ExamAttempt",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 

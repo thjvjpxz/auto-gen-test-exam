@@ -1,38 +1,50 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import { Providers } from '@/providers'
-import './globals.css'
+import type { Metadata } from "next";
+import { Lexend, Source_Sans_3, JetBrains_Mono } from "next/font/google";
+import { Providers } from "@/providers";
+import "./globals.css";
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
+const lexend = Lexend({
+  variable: "--font-heading",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+});
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
+const sourceSans = Source_Sans_3({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
-    default: 'Hệ Thống Thi CNTT Online',
-    template: '%s | Hệ Thống Thi CNTT Online',
+    default: "Hệ Thống Thi CNTT Online",
+    template: "%s | Hệ Thống Thi CNTT Online",
   },
-  description: 'Hệ thống thi trắc nghiệm và tự luận CNTT với AI tự động sinh đề và chấm điểm',
-}
+  description:
+    "Hệ thống thi trắc nghiệm và tự luận CNTT với AI tự động sinh đề và chấm điểm",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans antialiased`}
+        className={`${sourceSans.variable} ${lexend.variable} ${jetbrainsMono.variable} min-h-screen bg-background font-sans antialiased`}
       >
         <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }

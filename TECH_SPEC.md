@@ -30,8 +30,9 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 
 ### Người Dùng
 
-- **Giáo viên/Giảng viên CNTT:** Tạo đề SQL/Testing, xem kết quả sinh viên
-- **Sinh viên CNTT:** Làm bài thi, xem điểm & feedback
+- **Admin:** Tạo đề SQL/Testing, xem kết quả tất cả users, quản lý hệ thống
+- **User:** Làm bài thi, xem điểm & feedback của chính mình
+- **Quy mô:** 5-10 users cùng lúc (nhóm nhỏ)
 
 ---
 
@@ -70,19 +71,19 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
                │
     ┌──────────┼──────────┐
     │          │          │
-┌───▼────┐ ┌──▼───┐  ┌──▼─────┐
-│PostgreSQL│Redis │  │Gemini  │
-│        │ │      │  │  API   │
-│- Exams │ │-Cache│  │-Gen AI │
-│- Users │ │-Queue│  │-Grading│
-│-Results│ │-Lock │  │        │
-└────────┘ └──────┘  └────────┘
+┌───▼────┐  ┌──▼─────┐
+│ SQLite │  │Gemini  │
+│        │  │  API   │
+│- Exams │  │-Gen AI │
+│- Users │  │-Grading│
+│-Results│  │        │
+└────────┘  └────────┘
 ```
 
 ### Communication Flow
 
-1. **Đồng bộ (Synchronous):** Next.js UI → FastAPI REST API → SQLAlchemy → PostgreSQL
-2. **Bất đồng bộ (Async):** FastAPI → Celery (Redis broker) → Gemini AI → Database
+1. **Đồng bộ (Synchronous):** Next.js UI → FastAPI REST API → SQLAlchemy → SQLite
+2. **Bất đồng bộ (Async):** FastAPI → Background task (asyncio) → Gemini AI → Database
 3. **Real-time:** Next.js Client ↔ FastAPI WebSocket Server (timer, violations)
 
 ### Nguyên Tắc Phân Chia
@@ -104,7 +105,7 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 - ✅ ALL business logic (grading, scoring, trust score)
 - ✅ ALL AI integration (Gemini API calls)
 - ✅ WebSocket server (broadcast timer, violations)
-- ✅ Background jobs (Celery)
+- ✅ Background tasks (asyncio - đơn giản, không cần Celery)
 
 ---
 
@@ -165,21 +166,18 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 
 #### Database & ORM
 
-| Technology     | Version | Lý do chọn                                                                                          |
-| -------------- | ------- | --------------------------------------------------------------------------------------------------- |
-| **PostgreSQL** | 16+     | - ACID compliant<br>- JSONB support (exam_data, answers)<br>- Full-text search<br>- Mature & stable |
-| **SQLAlchemy** | 2.0+    | - **Backend ORM chính**<br>- Async support<br>- Relationships, migrations<br>- Connection pooling   |
-| **Alembic**    | 1.13.0  | - Database migrations<br>- Version control cho schema                                               |
-| **asyncpg**    | 0.29.0  | - Async PostgreSQL driver<br>- Nhanh hơn psycopg2                                                   |
-| **Redis**      | 7+      | - Cache<br>- Session store<br>- Celery broker<br>- Rate limiting                                    |
+| Technology     | Version | Lý do chọn                                                                                                                           |
+| -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **SQLite**     | 3+      | - File-based, không cần server<br>- Hoàn toàn miễn phí<br>- Đủ cho 5-10 users cùng lúc<br>- JSON support qua TEXT                    |
+| **SQLAlchemy** | 2.0+    | - **Backend ORM chính**<br>- Sync mode (SQLite đơn giản hơn async)<br>- Relationships, migrations<br>- WAL mode cho concurrent reads |
+| **Alembic**    | 1.13.0  | - Database migrations<br>- Version control cho schema                                                                                |
 
 #### AI & Background Jobs
 
-| Technology              | Version | Lý do chọn                                                                        |
-| ----------------------- | ------- | --------------------------------------------------------------------------------- |
-| **google-generativeai** | 0.8.6   | **Gemini AI SDK** - đang dùng trong bot hiện tại                                  |
-| **Celery**              | 5.3.4   | - Background tasks<br>- Async AI generation<br>- Retry logic<br>- Task scheduling |
-| **celery[redis]**       | 5.3.4   | Redis broker cho Celery                                                           |
+| Technology              | Version  | Lý do chọn                                                                                      |
+| ----------------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| **google-generativeai** | 0.8.6    | **Gemini AI SDK** - đang dùng trong bot hiện tại                                                |
+| **asyncio**             | Built-in | - Background tasks đơn giản<br>- Async AI generation<br>- Không cần Redis/Celery cho quy mô nhỏ |
 
 #### Security
 
@@ -212,27 +210,27 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 #### 1. **users**
 
 ```
-- id: SERIAL PRIMARY KEY
+- id: INTEGER PRIMARY KEY AUTOINCREMENT
 - email: TEXT UNIQUE NOT NULL
 - name: TEXT NOT NULL
 - password_hash: TEXT NOT NULL
-- role: ENUM('teacher', 'student') NOT NULL
+- role: TEXT NOT NULL DEFAULT 'user'  -- 'user' hoặc 'admin'
 - avatar_url: TEXT
-- created_at: TIMESTAMP DEFAULT NOW()
+- created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - updated_at: TIMESTAMP
 ```
 
 #### 2. **exams**
 
 ```
-- id: SERIAL PRIMARY KEY
+- id: INTEGER PRIMARY KEY AUTOINCREMENT
 - title: TEXT NOT NULL              // VD: "Đề thi CSDL & Kiểm thử - Hệ thống Quản lý Gym"
-- exam_type: ENUM('sql_testing', 'sql_only', 'testing_only') DEFAULT 'sql_testing'
+- exam_type: TEXT DEFAULT 'sql_testing'  -- 'sql_testing', 'sql_only', 'testing_only'
 - subject: TEXT                     // VD: "Database & Software Testing"
-- teacher_id: INTEGER REFERENCES users(id)
+- created_by: INTEGER REFERENCES users(id)  -- Admin tạo đề
 - duration: INTEGER NOT NULL        // phút
 - passing_score: INTEGER DEFAULT 60
-- exam_data_json: JSONB NOT NULL
+- exam_data_json: TEXT NOT NULL    -- JSON string (SQLite không có JSONB)
   Structure: {
     sql_part: {
       mermaid_code: string,         // ERD diagram code
@@ -247,29 +245,29 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
       question: string              // Yêu cầu (tự luận)
     }
   }
-- ai_generated: BOOLEAN DEFAULT TRUE
+- ai_generated: INTEGER DEFAULT 1  -- SQLite BOOLEAN = INTEGER (0/1)
 - gemini_model: TEXT DEFAULT 'gemini-2.5-flash-lite'
-- settings_json: JSONB
+- settings_json: TEXT              -- JSON string
   {
     allow_review: boolean,
     show_sample_solution: boolean,
     max_attempts: number
   }
-- is_published: BOOLEAN DEFAULT FALSE
-- created_at: TIMESTAMP DEFAULT NOW()
+- is_published: INTEGER DEFAULT 0  -- SQLite BOOLEAN
+- created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - updated_at: TIMESTAMP
 ```
 
 #### 3. **exam_attempts**
 
 ```
-- id: SERIAL PRIMARY KEY
+- id: INTEGER PRIMARY KEY AUTOINCREMENT
 - exam_id: INTEGER REFERENCES exams(id) ON DELETE CASCADE
-- student_id: INTEGER REFERENCES users(id)
-- answers_json: JSONB NOT NULL
+- user_id: INTEGER REFERENCES users(id)  -- User làm bài
+- answers_json: TEXT NOT NULL    -- JSON string
   Structure: {
     sql_part: {
-      question_1_answer: string,    // SQL query sinh viên viết
+      question_1_answer: string,    // SQL query user viết
       question_2_answer: string
     },
     testing_part: {
@@ -282,10 +280,10 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
       }]
     }
   }
-- score: DECIMAL(5,2)              // Điểm tổng
-- max_score: DECIMAL(5,2) DEFAULT 100
-- percentage: DECIMAL(5,2)
-- ai_grading_json: JSONB
+- score: REAL DEFAULT 0            // Điểm tổng (SQLite REAL thay DECIMAL)
+- max_score: REAL DEFAULT 100
+- percentage: REAL
+- ai_grading_json: TEXT             -- JSON string
   Structure: {
     sql_part: {
       question_1: {
@@ -305,51 +303,48 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
     overall_feedback: string
   }
 - tab_switch_count: INTEGER DEFAULT 0
-- violation_logs: JSONB
+- violation_logs: TEXT             -- JSON string
   [{
     type: 'tab_switch' | 'copy' | 'paste' | 'fullscreen_exit',
     timestamp: ISO string,
     details: string
   }]
-- started_at: TIMESTAMP DEFAULT NOW()
+- started_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - submitted_at: TIMESTAMP
-- time_taken: INTEGER (seconds)
+- time_taken: INTEGER              -- seconds
 - ip_address: TEXT
 - user_agent: TEXT
 ```
 
-#### 4. **exam_invitations** (optional - cho private exams)
+#### 4. **ai_generation_logs** (tracking AI usage - optional)
 
 ```
-- id: SERIAL PRIMARY KEY
-- exam_id: INTEGER REFERENCES exams(id)
-- student_id: INTEGER REFERENCES users(id)
-- invited_by: INTEGER REFERENCES users(id)
-- status: ENUM('pending', 'accepted', 'completed')
-- invited_at: TIMESTAMP DEFAULT NOW()
-```
-
-#### 5. **ai_generation_logs** (tracking AI usage)
-
-```
-- id: SERIAL PRIMARY KEY
+- id: INTEGER PRIMARY KEY AUTOINCREMENT
 - user_id: INTEGER REFERENCES users(id)
 - exam_id: INTEGER REFERENCES exams(id)
 - prompt: TEXT
 - model: TEXT
 - tokens_used: INTEGER
-- cost: DECIMAL(10,4)
+- cost: REAL DEFAULT 0
 - duration_ms: INTEGER
-- created_at: TIMESTAMP DEFAULT NOW()
+- created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ```
 
 ### Relations
 
 ```
-users (1) ----< (N) exams (teacher creates exams)
-users (1) ----< (N) exam_attempts (student takes exams)
+users (1) ----< (N) exams (admin creates exams)
+users (1) ----< (N) exam_attempts (user takes exams)
 exams (1) ----< (N) exam_attempts (exam has many attempts)
 ```
+
+### Lưu ý SQLite
+
+- **WAL Mode:** Bật WAL mode để hỗ trợ concurrent reads tốt hơn
+- **JSON Storage:** Dùng TEXT column + json.loads/dumps (Python) thay vì JSONB
+- **BOOLEAN:** Dùng INTEGER (0/1) thay vì BOOLEAN type
+- **DECIMAL:** Dùng REAL hoặc TEXT (nếu cần precision cao)
+- **AUTOINCREMENT:** Thay vì SERIAL
 
 ---
 
@@ -410,7 +405,7 @@ exams (1) ----< (N) exam_attempts (exam has many attempts)
 1. User nhập email/password (Next.js form)
 2. Next.js → POST /api/auth/login (FastAPI)
 3. FastAPI:
-   - Query user từ PostgreSQL (SQLAlchemy)
+   - Query user từ SQLite (SQLAlchemy)
    - passlib.verify(password, hash)
    - Generate JWT token (python-jose)
    - Return { access_token, user_data }
@@ -418,6 +413,21 @@ exams (1) ----< (N) exam_attempts (exam has many attempts)
    - Lưu token vào cookie (httpOnly) hoặc localStorage
    - Lưu user data vào Zustand store
    - Redirect to dashboard
+```
+
+#### Register Flow
+
+```
+1. User nhập email/password/name (Next.js form)
+2. Next.js → POST /api/auth/register (FastAPI)
+3. FastAPI:
+   - Validate email unique
+   - Hash password (bcrypt)
+   - Tạo user với role='user' (mặc định)
+   - Generate JWT token
+   - Return { access_token, user_data }
+4. Next.js:
+   - Lưu token và redirect to dashboard
 ```
 
 #### Protected Routes
@@ -439,13 +449,14 @@ exams (1) ----< (N) exam_attempts (exam has many attempts)
 #### Role-Based Access Control (RBAC)
 
 ```
-Teacher:
+Admin:
   ✅ Create/edit/delete exams
   ✅ View all attempts
   ✅ View analytics
-  ❌ Take exams
+  ✅ Manage users (promote to admin)
+  ❌ Take exams (optional - có thể cho phép)
 
-Student:
+User:
   ✅ View available exams
   ✅ Take exams
   ✅ View own results
@@ -460,29 +471,27 @@ Student:
 ### Authentication
 
 ```
-POST   /api/auth/register          # Đăng ký (email, password, name, role)
+POST   /api/auth/register          # Đăng ký (email, password, name) - role mặc định 'user'
 POST   /api/auth/login             # Đăng nhập → JWT token
-POST   /api/auth/refresh           # Refresh token
 GET    /api/auth/me                # Get current user info
 POST   /api/auth/logout            # Logout (invalidate token)
 ```
 
-### Exams (Teacher)
+### Exams (Admin)
 
 ```
 GET    /api/exams                  # List exams (filter, sort, pagination)
-POST   /api/exams                  # Create exam manually
-POST   /api/exams/generate         # AI generate exam → task_id
+POST   /api/exams/generate         # AI generate exam → task_id (async)
 GET    /api/tasks/{task_id}        # Poll generation status
 GET    /api/exams/{id}             # Get exam details
 PATCH  /api/exams/{id}             # Update exam (title, settings, publish)
 DELETE /api/exams/{id}             # Delete exam
 ```
 
-### Exams (Student)
+### Exams (User)
 
 ```
-GET    /api/exams/available        # List published exams (student view)
+GET    /api/exams/available        # List published exams (user view)
 GET    /api/exams/{id}/preview     # Preview exam (before start)
 POST   /api/exams/{id}/start       # Start exam → create attempt
 ```
@@ -499,10 +508,10 @@ POST   /api/violations             # Log violation
 ### Results
 
 ```
-GET    /api/attempts/{id}/result   # Get grading result
-GET    /api/exams/{id}/attempts    # List attempts for exam (teacher)
-GET    /api/exams/{id}/analytics   # Analytics data
-GET    /api/exams/{id}/export      # Export CSV/PDF
+GET    /api/attempts/{id}/result   # Get grading result (user xem của mình, admin xem tất cả)
+GET    /api/exams/{id}/attempts    # List attempts for exam (admin only)
+GET    /api/exams/{id}/analytics   # Analytics data (admin only)
+GET    /api/exams/{id}/export      # Export CSV/PDF (admin only)
 ```
 
 ### WebSocket Events
@@ -543,17 +552,17 @@ Server → Client:
 - `exam_type`: 'sql_testing' | 'sql_only' | 'testing_only'
 - `custom_domain` (optional): VD "Hệ thống quản lý khách sạn"
 - `difficulty` (optional): 'basic' | 'intermediate' | 'advanced'
-- `teacher_id`: ID của giáo viên
+- `created_by`: ID của admin (từ JWT token)
 
 **Process:**
 
-1. User click "Generate Exam" (giáo viên)
-2. Next.js Server Action → FastAPI endpoint
-3. FastAPI → Celery task (async)
-4. Celery → **Tái sử dụng `core/ai_generator.py`**
+1. Admin click "Generate Exam" (Next.js UI)
+2. Next.js → POST /api/exams/generate (FastAPI)
+3. FastAPI → Background task (asyncio, không cần Celery)
+4. Background task → **Tái sử dụng `core/ai_generator.py`**
 5. Gemini API với MASTER_PROMPT (đã có trong code)
 6. Parse JSON response (có sẵn validation)
-7. Save to DB (exams table)
+7. Save to SQLite (exams table)
 8. Return exam_id + preview data
 
 **Prompt Template:**
@@ -770,12 +779,12 @@ Output JSON:
 
 ## 📊 Features Specification
 
-### 1. Dashboard (Teacher)
+### 1. Dashboard (Admin)
 
 #### Overview Cards
 
 - 📝 Total Exams Created
-- 👥 Total Students
+- 👥 Total Users
 - ✅ Total Attempts
 - 📈 Average Score
 
@@ -806,7 +815,7 @@ Output JSON:
 
 ---
 
-### 2. Create Exam (Teacher)
+### 2. Create Exam (Admin)
 
 #### Form Fields
 
@@ -835,7 +844,7 @@ Output JSON:
 
 #### AI Generation Flow (Simplified)
 
-1. Teacher click **"Generate New Exam"** (Next.js UI)
+1. Admin click **"Generate New Exam"** (Next.js UI)
 2. Chọn options trong form:
    - Exam type (SQL+Testing, chỉ SQL, chỉ Testing)
    - Custom domain (optional)
@@ -844,14 +853,14 @@ Output JSON:
 
 4. **FastAPI Backend:**
    - Validate request (Pydantic)
-   - Create Celery task (async)
+   - Create background task (asyncio.create_task)
    - Return task_id ngay lập tức
 
-   **Celery Worker:**
+   **Background Task:**
    - Call core/ai_generator.py (code hiện tại)
    - Gemini API (gemini-2.5-flash-lite)
    - Parse JSON response
-   - SQLAlchemy: Save to exams table
+   - SQLAlchemy: Save to SQLite (exams table)
    - Update task status → "completed"
 
 5. **Next.js Frontend:**
@@ -862,11 +871,11 @@ Output JSON:
    - Hiển thị ERD (Mermaid diagram client-side)
    - Hiển thị SQL questions
    - Hiển thị Testing scenario + rules
-7. **Teacher actions:**
-   - ✅ **Publish:** PATCH /api/exams/{id} set is_published=true
+7. **Admin actions:**
+   - ✅ **Publish:** PATCH /api/exams/{id} set is_published=1
    - 🔄 **Regenerate:** POST /api/exams/generate lại
    - ✏️ **Edit (future):** PUT /api/exams/{id}
-8. **Published** → Students có thể làm bài
+8. **Published** → Users có thể làm bài
 
 #### No Manual Entry (MVP)
 
@@ -876,7 +885,7 @@ Output JSON:
 
 ---
 
-### 3. Exam List (Student)
+### 3. Exam List (User)
 
 #### Display
 
@@ -898,7 +907,7 @@ Output JSON:
 
 ---
 
-### 4. Take Exam (Student)
+### 4. Take Exam (User)
 
 #### Pre-Exam Screen
 
@@ -1005,7 +1014,7 @@ Output JSON:
 
 ---
 
-### 5. Results Page (Student)
+### 5. Results Page (User)
 
 #### Summary Card
 
@@ -1098,7 +1107,7 @@ Output JSON:
 
 ---
 
-### 6. Results Management (Teacher)
+### 6. Results Management (Admin)
 
 #### Attempt Details
 
@@ -1144,20 +1153,17 @@ Output JSON:
 
 ### Backend (FastAPI)
 
-**Platform:** Railway
+**Platform:** Server của bạn (VPS/Cloud)
 
-**Config (railway.toml):**
+**Config:**
 
-- Builder: NIXPACKS
-- Build: `pip install -r requirements.txt`
-- Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- Start: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+- Process manager: systemd hoặc supervisor
 - Healthcheck: `/health` endpoint
-- Restart policy: ON_FAILURE
 
 **Environment Variables:**
 
-- `DATABASE_URL`: PostgreSQL connection string
-- `REDIS_URL`: Redis connection string
+- `DATABASE_URL`: SQLite file path (VD: `sqlite:///./exam.db`)
 - `GEMINI_API_KEY`: Google Gemini API key
 - `JWT_SECRET`: Secret key cho JWT signing
 - `CORS_ORIGINS`: Frontend domain (Vercel URL)
@@ -1166,35 +1172,24 @@ Output JSON:
 
 ### Database
 
-**Platform:** Neon (Serverless PostgreSQL)
+**Platform:** SQLite (File-based)
 
-**Tier:** Free → Pro
+**Storage:**
 
-- Free: 0.5GB storage, 1 compute unit
-- Pro: 10GB storage, autoscaling
+- File: `exam.db` trong thư mục backend
+- Backup: Copy file `.db` định kỳ
+- WAL Mode: Bật để hỗ trợ concurrent reads
 
 **Connection:**
 
-- Format: `postgresql://user:pass@ep-xxx.neon.tech/dbname?sslmode=require`
-- Connection Pooling: PgBouncer (built-in)
+- Format: `sqlite:///./exam.db` (relative) hoặc `sqlite:////absolute/path/exam.db`
+- Không cần connection pooling (SQLite đơn giản)
 
----
+**Lưu ý:**
 
-### Cache/Queue
-
-**Platform:** Upstash Redis
-
-**Tier:** Free → Pay-as-you-go
-
-- Free: 10K requests/day
-- Paid: $0.2/100K requests
-
-**Use Cases:**
-
-- Session storage
-- Celery broker
-- Rate limiting
-- Cache API responses
+- SQLite file nên đặt trong thư mục persistent trên server
+- Backup định kỳ (cron job copy file `.db`)
+- WAL mode giúp đọc đồng thời tốt hơn
 
 ---
 
@@ -1231,9 +1226,9 @@ Output JSON:
 
 ### Scalability
 
-- ✅ Support 1000 concurrent exam takers
-- ✅ Handle 100 exams/day generation
-- ✅ Store 10K+ exam attempts
+- ✅ Support 5-10 concurrent exam takers (quy mô nhỏ)
+- ✅ Handle 10-20 exams/day generation
+- ✅ Store 1000+ exam attempts (đủ cho nhóm nhỏ)
 
 ---
 
@@ -1351,33 +1346,20 @@ Output JSON:
 | Service        | Free Tier                            | Cost         |
 | -------------- | ------------------------------------ | ------------ |
 | Vercel         | Unlimited hobby                      | $0           |
-| Railway        | $5 credit/mo                         | $0           |
-| Neon DB        | 0.5GB                                | $0           |
-| Upstash Redis  | 10K req/day                          | $0           |
+| Server của bạn | Đã có                                | $0           |
+| SQLite         | File-based, không giới hạn           | $0           |
 | **Gemini API** | **Free tier: 15 RPM, 1M tokens/day** | **$0** 🎉    |
 | **Total**      |                                      | **$0/mo** ✅ |
 
-### Production (50 students, 5 teachers)
+### Production (5-10 users)
 
-| Service        | Usage                 | Cost        |
-| -------------- | --------------------- | ----------- |
-| Vercel         | Pro plan              | $20/mo      |
-| Railway        | ~15GB-hours           | $7/mo       |
-| Neon           | Pro plan              | $19/mo      |
-| Upstash        | 500K requests         | $5/mo       |
-| **Gemini API** | **Free tier đủ dùng** | **$0**      |
-| **Total**      |                       | **~$51/mo** |
-
-### Scale (500 students, 50 teachers)
-
-| Service        | Usage                         | Cost         |
-| -------------- | ----------------------------- | ------------ |
-| Vercel         | Pro plan                      | $20/mo       |
-| Railway        | ~100GB-hours                  | $50/mo       |
-| Neon           | Pro plan                      | $69/mo       |
-| Upstash        | 5M requests                   | $30/mo       |
-| **Gemini API** | Pay-as-you-go (nếu vượt free) | ~$20/mo      |
-| **Total**      |                               | **~$189/mo** |
+| Service        | Usage                 | Cost         |
+| -------------- | --------------------- | ------------ |
+| Vercel         | Free tier đủ          | $0           |
+| Server của bạn | Đã có                 | $0           |
+| SQLite         | File-based            | $0           |
+| **Gemini API** | **Free tier đủ dùng** | **$0**       |
+| **Total**      |                       | **$0/mo** ✅ |
 
 **Lưu ý:** Gemini API có free tier rất hào phóng:
 
@@ -1423,9 +1405,9 @@ Output JSON:
 
 - `core/ai_generator.py` → ExamGenerator class
   - Wrap vào FastAPI endpoint: POST /api/exams/generate
-  - Chạy trong Celery task (async)
+  - Chạy trong background task (asyncio, không cần Celery)
 - `core/config.py` → Gemini API key, prompts
-  - Thêm: DATABASE_URL, REDIS_URL, JWT_SECRET
+  - Thêm: DATABASE_URL (SQLite), JWT_SECRET
 - `render/pdf_exporter.py` → Export results as PDF
   - Endpoint: GET /api/attempts/{id}/export
 
@@ -1450,31 +1432,36 @@ Output JSON:
 - REST API endpoints (auth, CRUD exams/attempts)
 - WebSocket server (timer, violations)
 - AI grading endpoint (NEW - chấm điểm SQL/Testing)
-- SQLAlchemy models & migrations
+- SQLAlchemy models & migrations (SQLite)
+- Background tasks (asyncio thay Celery)
 
 ### Tech Decisions Rationale
 
 1. **SQLAlchemy (Backend) > Drizzle (Frontend):**
    - Next.js không truy cập DB trực tiếp
-   - SQLAlchemy: Python ORM chuẩn, async support, mature
+   - SQLAlchemy: Python ORM chuẩn, sync mode cho SQLite đơn giản
 2. **FastAPI JWT > Auth.js:**
    - Tất cả auth logic ở backend
    - python-jose + passlib: chuẩn industry
 3. **FastAPI > Django:**
    - Lightweight, async native
    - Tái sử dụng code Python hiện tại (ai_generator.py)
-4. **PostgreSQL > MongoDB:**
-   - Relational data (users, exams, attempts)
-   - JSONB cho unstructured (exam_data, answers)
+4. **SQLite > PostgreSQL:**
+   - Đơn giản, không cần server
+   - Đủ cho 5-10 users cùng lúc
+   - JSON storage qua TEXT column + json.loads/dumps
 5. **Gemini > Claude/GPT:**
    - Đang dùng trong bot, tái sử dụng 100%
    - Free tier: 15 RPM, 1M tokens/day
 6. **React Query > SWR:**
    - Better caching strategy
    - Optimistic updates cho exam answers
+7. **asyncio > Celery:**
+   - Đơn giản hơn, không cần Redis
+   - Đủ cho quy mô nhỏ (5-10 users)
 
 ---
 
-**Last Updated:** 28/01/2026  
-**Version:** 1.0  
+**Last Updated:** 29/01/2026  
+**Version:** 2.0 (Simplified)  
 **Status:** Ready for Development 🚀
