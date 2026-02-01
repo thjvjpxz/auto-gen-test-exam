@@ -11,6 +11,10 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
+  Clock,
+  Target,
+  BookOpen,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,50 +120,64 @@ export default function GenerateExamPage() {
   }, [isCompleted, examId, router]);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl">
       {/* Header */}
-      <div className="mb-8">
+      <div className="animate-fade-in-down mb-8">
         <Button
           variant="ghost"
           asChild
-          className="mb-4 -ml-2 text-slate-600 hover:text-slate-900 cursor-pointer"
+          className="-ml-2 mb-4 cursor-pointer text-muted-foreground transition-all duration-200 hover:text-foreground"
         >
           <Link href="/admin/exams">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 size-4" />
             Quay lại
           </Link>
         </Button>
-        <h1 className="text-3xl font-heading font-bold text-slate-900">
-          Sinh đề thi tự động
-        </h1>
-        <p className="mt-2 text-slate-600">
-          Sử dụng AI để tạo đề thi CNTT (SQL và Kiểm thử phần mềm) tự động
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg">
+            <Sparkles className="size-6 text-white" />
+          </div>
+          <div>
+            <h1 className="font-heading text-3xl font-bold text-foreground">
+              Sinh đề thi tự động
+            </h1>
+            <p className="mt-1 text-muted-foreground">
+              Sử dụng AI để tạo đề thi CNTT tự động
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Form */}
-      <Card className="border-slate-200">
-        <CardHeader>
-          <CardTitle className="font-heading flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-blue-600" />
+      <Card className="animate-fade-in-up overflow-hidden border-0 shadow-lg">
+        {/* Top accent */}
+        <div className="h-1 bg-gradient-to-r from-primary via-accent to-primary" />
+
+        <CardHeader className="border-b bg-muted/30">
+          <CardTitle className="flex items-center gap-2 font-heading">
+            <Zap className="size-5 text-primary" />
             Cấu hình đề thi
           </CardTitle>
           <CardDescription>
             Điền thông tin để AI sinh đề thi phù hợp
           </CardDescription>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="pt-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Exam Type */}
             <div className="space-y-2">
-              <Label htmlFor="exam_type">Loại đề thi</Label>
+              <Label htmlFor="exam_type" className="flex items-center gap-2">
+                <BookOpen className="size-4 text-muted-foreground" />
+                Loại đề thi
+              </Label>
               <Select
                 value={examType}
                 onValueChange={(value) =>
                   setValue("exam_type", value as ExamType)
                 }
               >
-                <SelectTrigger className="cursor-pointer">
+                <SelectTrigger className="cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary/20">
                   <SelectValue placeholder="Chọn loại đề thi" />
                 </SelectTrigger>
                 <SelectContent>
@@ -175,7 +193,7 @@ export default function GenerateExamPage() {
                 </SelectContent>
               </Select>
               {errors.exam_type && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-destructive">
                   {errors.exam_type.message}
                 </p>
               )}
@@ -183,18 +201,23 @@ export default function GenerateExamPage() {
 
             {/* Duration */}
             <div className="space-y-2">
-              <Label htmlFor="duration">Thời gian làm bài (phút)</Label>
+              <Label htmlFor="duration" className="flex items-center gap-2">
+                <Clock className="size-4 text-muted-foreground" />
+                Thời gian làm bài (phút)
+              </Label>
               <Input
                 id="duration"
                 type="number"
                 min={30}
                 max={240}
                 {...register("duration", { valueAsNumber: true })}
-                className="w-full"
+                className="w-full transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               />
-              <p className="text-xs text-slate-500">Từ 30 đến 240 phút</p>
+              <p className="text-xs text-muted-foreground">
+                Từ 30 đến 240 phút
+              </p>
               {errors.duration && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-destructive">
                   {errors.duration.message}
                 </p>
               )}
@@ -202,20 +225,26 @@ export default function GenerateExamPage() {
 
             {/* Passing Score */}
             <div className="space-y-2">
-              <Label htmlFor="passing_score">Điểm đạt (%)</Label>
+              <Label
+                htmlFor="passing_score"
+                className="flex items-center gap-2"
+              >
+                <Target className="size-4 text-muted-foreground" />
+                Điểm đạt (%)
+              </Label>
               <Input
                 id="passing_score"
                 type="number"
                 min={0}
                 max={100}
                 {...register("passing_score", { valueAsNumber: true })}
-                className="w-full"
+                className="w-full transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Phần trăm điểm tối thiểu để đạt
               </p>
               {errors.passing_score && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-destructive">
                   {errors.passing_score.message}
                 </p>
               )}
@@ -225,21 +254,21 @@ export default function GenerateExamPage() {
             <div className="space-y-2">
               <Label htmlFor="subject">
                 Môn học / Chủ đề{" "}
-                <span className="text-slate-400">(tùy chọn)</span>
+                <span className="text-muted-foreground">(tùy chọn)</span>
               </Label>
               <Input
                 id="subject"
                 type="text"
                 placeholder="VD: Quản lý cơ sở dữ liệu, E-commerce..."
                 {...register("subject")}
-                className="w-full"
+                className="w-full transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             {/* Error Alert */}
             {error && !isGenerating && (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
+              <Alert variant="destructive" className="animate-fade-in-scale">
+                <XCircle className="size-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -248,16 +277,17 @@ export default function GenerateExamPage() {
             <Button
               type="submit"
               disabled={isGenerating}
-              className="w-full bg-primary hover:brightness-95 text-primary-foreground cursor-pointer transition-all"
+              className="glow-effect w-full cursor-pointer bg-primary text-primary-foreground transition-all duration-200 hover:scale-[1.01] hover:bg-primary/90"
+              size="lg"
             >
               {isGenerating ? (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="mr-2 size-4 animate-spin" />
                   Đang sinh đề...
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-4 w-4" />
+                  <Sparkles className="mr-2 size-4" />
                   Sinh đề thi
                 </>
               )}
@@ -272,89 +302,108 @@ export default function GenerateExamPage() {
         onOpenChange={() => {}}
       >
         <DialogContent
-          className="sm:max-w-md"
+          className="animate-fade-in-scale overflow-hidden border-0 p-0 shadow-2xl sm:max-w-md"
           onPointerDownOutside={(e) => e.preventDefault()}
         >
-          <DialogHeader>
-            <DialogTitle className="font-heading flex items-center gap-2">
-              {isCompleted ? (
-                <>
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  Sinh đề thành công!
-                </>
-              ) : isFailed ? (
-                <>
-                  <XCircle className="h-5 w-5 text-red-600" />
-                  Sinh đề thất bại
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-5 w-5 text-blue-600 animate-pulse" />
-                  Đang sinh đề thi...
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {isCompleted
-                ? "Đang chuyển đến trang xem đề thi..."
+          {/* Top accent */}
+          <div
+            className={`h-1.5 ${
+              isCompleted
+                ? "bg-gradient-to-r from-green-400 to-emerald-500"
                 : isFailed
-                  ? error || "Đã xảy ra lỗi khi sinh đề"
-                  : "AI đang tạo đề thi cho bạn. Vui lòng đợi trong giây lát."}
-            </DialogDescription>
-          </DialogHeader>
+                  ? "bg-gradient-to-r from-red-400 to-orange-500"
+                  : "bg-gradient-to-r from-primary via-accent to-primary"
+            }`}
+          />
 
-          <div className="space-y-4 py-4">
-            <Progress
-              value={isCompleted ? 100 : isFailed ? 0 : progress}
-              className="h-2"
-            />
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">
+          <div className="p-6">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 font-heading text-xl">
+                {isCompleted ? (
+                  <>
+                    <div className="flex size-10 items-center justify-center rounded-full bg-green-100">
+                      <CheckCircle2 className="size-5 text-green-600" />
+                    </div>
+                    Sinh đề thành công!
+                  </>
+                ) : isFailed ? (
+                  <>
+                    <div className="flex size-10 items-center justify-center rounded-full bg-red-100">
+                      <XCircle className="size-5 text-red-600" />
+                    </div>
+                    Sinh đề thất bại
+                  </>
+                ) : (
+                  <>
+                    <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+                      <Sparkles className="size-5 animate-pulse text-primary" />
+                    </div>
+                    Đang sinh đề thi...
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription className="pt-2">
                 {isCompleted
-                  ? "Hoàn tất!"
+                  ? "Đang chuyển đến trang xem đề thi..."
                   : isFailed
-                    ? "Thất bại"
-                    : getProgressText(progress)}
-              </span>
-              <span className="font-medium text-slate-900">
-                {isCompleted ? 100 : isFailed ? 0 : progress}%
-              </span>
+                    ? error || "Đã xảy ra lỗi khi sinh đề"
+                    : "AI đang tạo đề thi cho bạn. Vui lòng đợi trong giây lát."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-6">
+              <Progress
+                value={isCompleted ? 100 : isFailed ? 0 : progress}
+                className="h-3"
+              />
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {isCompleted
+                    ? "Hoàn tất!"
+                    : isFailed
+                      ? "Thất bại"
+                      : getProgressText(progress)}
+                </span>
+                <span className="font-semibold text-foreground">
+                  {isCompleted ? 100 : isFailed ? 0 : progress}%
+                </span>
+              </div>
             </div>
+
+            {isGenerating && (
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={reset}
+                  className="cursor-pointer transition-all duration-200 hover:border-destructive/50 hover:text-destructive"
+                >
+                  Hủy bỏ
+                </Button>
+              </div>
+            )}
+
+            {isFailed && (
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={reset}
+                  className="flex-1 cursor-pointer transition-all duration-200"
+                >
+                  Đóng
+                </Button>
+                <Button
+                  onClick={() => {
+                    reset();
+                    handleSubmit(onSubmit)();
+                  }}
+                  className="flex-1 cursor-pointer bg-primary text-primary-foreground transition-all duration-200 hover:bg-primary/90"
+                >
+                  <RefreshCw className="mr-2 size-4" />
+                  Thử lại
+                </Button>
+              </div>
+            )}
           </div>
-
-          {isGenerating && (
-            <div className="flex justify-center">
-              <Button
-                variant="outline"
-                onClick={reset}
-                className="cursor-pointer"
-              >
-                Hủy bỏ
-              </Button>
-            </div>
-          )}
-
-          {isFailed && (
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={reset}
-                className="flex-1 cursor-pointer"
-              >
-                Đóng
-              </Button>
-              <Button
-                onClick={() => {
-                  reset();
-                  handleSubmit(onSubmit)();
-                }}
-                className="flex-1 bg-primary hover:brightness-95 text-primary-foreground cursor-pointer transition-all"
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Thử lại
-              </Button>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </div>

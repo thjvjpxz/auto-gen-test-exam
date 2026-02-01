@@ -18,7 +18,6 @@ from app.models.exam import ExamType
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
 GENERATION_TEMPERATURE = 1.0
 
-# Master Prompt for exam generation - optimized for Vietnamese IT exams
 MASTER_PROMPT = """
 Bạn là một chuyên gia soạn đề thi CNTT với 20 năm kinh nghiệm. Nhiệm vụ: tạo đề thi gồm 2 phần (SQL và Testing) hoàn toàn MỚI và KHÁC BIỆT so với các đề trước.
 
@@ -92,12 +91,50 @@ Yêu cầu:
 
 ---
 
+## CÚ PHÁP MERMAID ERD (BẮT BUỘC TUÂN THỦ)
+
+Mermaid ERD có cú pháp NGHIÊM NGẶT. Mỗi thuộc tính phải theo format:
+```
+TYPE attribute_name [PK|FK|UK]
+```
+
+**QUY TẮC:**
+- PK = Primary Key, FK = Foreign Key, UK = Unique Key
+- KHÔNG dùng: `PRIMARY KEY (...)`, `FOREIGN KEY (...)`, `CONSTRAINT`, `UNIQUE` (dùng UK thay thế)
+- Với bảng trung gian (junction table), mỗi cột FK được đánh dấu riêng
+
+**VÍ DỤ ĐÚNG:**
+```
+erDiagram
+    USERS {
+        INT user_id PK
+        VARCHAR email UK
+        VARCHAR name
+        DATE created_at
+    }
+    ORDERS {
+        INT order_id PK
+        INT user_id FK
+        DECIMAL total_amount
+        DATETIME order_date
+    }
+    ORDER_ITEMS {
+        INT order_id FK
+        INT product_id FK
+        INT quantity
+    }
+    USERS ||--|{ ORDERS : "places"
+    ORDERS ||--|{ ORDER_ITEMS : "contains"
+```
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
   "exam_title": "string - Tiêu đề cụ thể theo chủ đề, ví dụ: Đề thi CSDL & Kiểm thử - Hệ thống Quản lý Gym",
   "sql_part": {
-    "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh",
+    "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh theo cú pháp trên",
     "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
   },
   "testing_part": {
@@ -111,7 +148,7 @@ Yêu cầu:
 
 **LƯU Ý QUAN TRỌNG:**
 - KHÔNG trả về ví dụ mẫu, PHẢI sinh nội dung hoàn toàn mới
-- Mermaid code PHẢI là cú pháp hợp lệ, có thể render được
+- Mermaid code PHẢI tuân thủ cú pháp ở trên, KHÔNG dùng PRIMARY KEY(...) hay UNIQUE
 - Các con số trong bài Testing PHẢI nhất quán và tính toán được
 """
 
@@ -131,18 +168,68 @@ Bạn là một chuyên gia soạn đề thi CNTT với 20 năm kinh nghiệm. N
 **Bước 3: Tạo 2-3 câu hỏi SQL với độ khó đa dạng:**
 - Từ cơ bản (SELECT-WHERE, ORDER BY) đến nâng cao (Subquery, JOIN, Window Functions)
 
+---
+
+## CÚ PHÁP MERMAID ERD (BẮT BUỘC TUÂN THỦ)
+
+Mermaid ERD có cú pháp NGHIÊM NGẶT. Mỗi thuộc tính phải theo format:
+```
+TYPE attribute_name [PK|FK|UK]
+```
+
+**QUY TẮC:**
+- PK = Primary Key, FK = Foreign Key, UK = Unique Key
+- KHÔNG được dùng: `PRIMARY KEY (...)`, `FOREIGN KEY (...)`, `CONSTRAINT`, `UNIQUE`
+- Dùng UK thay cho UNIQUE
+- Với bảng trung gian (junction table), mỗi cột FK được đánh dấu riêng
+
+**VÍ DỤ ĐÚNG:**
+```
+erDiagram
+    USERS {
+        INT user_id PK
+        VARCHAR email UK
+        VARCHAR name
+        DATE created_at
+    }
+    ORDERS {
+        INT order_id PK
+        INT user_id FK
+        DECIMAL total_amount
+        DATETIME order_date
+    }
+    ORDER_ITEMS {
+        INT order_id FK
+        INT product_id FK
+        INT quantity
+    }
+    USERS ||--|{ ORDERS : "places"
+    ORDERS ||--|{ ORDER_ITEMS : "contains"
+```
+
+**VÍ DỤ SAI (KHÔNG ĐƯỢC LÀM):**
+```
+TABLE {
+    PRIMARY KEY (col1, col2)  ❌ Không hợp lệ
+    VARCHAR email UNIQUE      ❌ Dùng UK thay thế
+    CONSTRAINT fk_xxx         ❌ Không hợp lệ
+}
+```
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
   "exam_title": "string - Tiêu đề cụ thể",
   "sql_part": {
-    "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh",
+    "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh theo cú pháp trên",
     "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
   },
   "testing_part": null
 }
 
-**LƯU Ý:** Mermaid code PHẢI là cú pháp hợp lệ, có thể render được.
+**LƯU Ý:** Mermaid code PHẢI tuân thủ cú pháp ở trên. KHÔNG dùng PRIMARY KEY(...), UNIQUE, CONSTRAINT.
 """
 
 # Testing-only prompt - generates only Testing part

@@ -204,3 +204,24 @@ export function useDeleteExam() {
     },
   });
 }
+
+/**
+ * Hook for updating exam (including settings)
+ */
+export function useUpdateExam() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      examId,
+      data,
+    }: {
+      examId: number;
+      data: import("@/types").ExamUpdateData;
+    }) => examService.updateExam(examId, data),
+    onSuccess: (_, { examId }) => {
+      queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["exam", examId] });
+    },
+  });
+}

@@ -1,6 +1,21 @@
-import { Brain, Clock, FileText, BarChart3 } from "lucide-react";
+"use client";
 
-const FEATURES = [
+import {
+  Brain,
+  Clock,
+  FileText,
+  BarChart3,
+  type LucideIcon,
+} from "lucide-react";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+
+interface Feature {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}
+
+const FEATURES: Feature[] = [
   {
     icon: Brain,
     title: "AI Sinh Đề Thông Minh",
@@ -28,10 +43,20 @@ const FEATURES = [
 ];
 
 export function FeaturesSection() {
+  const [sectionRef, isRevealed] = useScrollReveal<HTMLElement>({
+    threshold: 0.1,
+    rootMargin: "0px 0px -100px 0px",
+  });
+
   return (
-    <section id="features" className="px-6 py-24">
+    <section id="features" ref={sectionRef} className="px-6 py-24">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-16 text-center">
+        {/* Section header */}
+        <div
+          className={`mb-16 text-center transition-all duration-700 ease-out ${
+            isRevealed ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          }`}
+        >
           <h2 className="mb-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Tính năng nổi bật
           </h2>
@@ -40,18 +65,29 @@ export function FeaturesSection() {
           </p>
         </div>
 
+        {/* Feature cards with staggered animation */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((feature) => (
+          {FEATURES.map((feature, index) => (
             <article
               key={feature.title}
-              className="group cursor-pointer rounded-lg border border-border bg-card p-6 transition-colors duration-200 hover:border-primary/30 hover:bg-primary/5"
+              className={`hover-lift group cursor-pointer rounded-lg border border-border bg-card p-6 transition-all duration-500 ease-out hover:border-primary/30 hover:bg-primary/5 ${
+                isRevealed
+                  ? "translate-y-0 opacity-100"
+                  : "translate-y-12 opacity-0"
+              }`}
+              style={{
+                transitionDelay: isRevealed ? `${index * 100 + 200}ms` : "0ms",
+              }}
             >
-              <div className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-primary-foreground">
+              {/* Icon with animated background */}
+              <div className="icon-bounce mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
                 <feature.icon className="size-6" />
               </div>
+
               <h3 className="mb-2 font-heading text-lg font-semibold text-foreground">
                 {feature.title}
               </h3>
+
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {feature.description}
               </p>

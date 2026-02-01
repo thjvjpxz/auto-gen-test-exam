@@ -96,6 +96,13 @@ class GradingResult(BaseModel):
     )
 
 
+class SubmittedAnswers(BaseModel):
+    """User's submitted answers for result display."""
+
+    sql_part: dict | None = Field(default=None, description="SQL part answers")
+    testing_part: dict | None = Field(default=None, description="Testing part answers")
+
+
 class AttemptResultOut(BaseModel):
     """Response schema for viewing graded attempt result."""
 
@@ -120,3 +127,7 @@ class AttemptResultOut(BaseModel):
     )
 
     grading: GradingResult | None = Field(default=None, description="Detailed AI grading result")
+    submitted_answers: SubmittedAnswers | None = Field(
+        default=None,
+        description="User's submitted answers for review",
+    )

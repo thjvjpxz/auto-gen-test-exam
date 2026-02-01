@@ -321,7 +321,17 @@ async def update_exam(
         exam.is_published = request.is_published
         has_changes = True
     
-    # Update updated_at timestamp if there were changes
+    if request.settings is not None:
+        current_settings = exam.settings_json or {}
+        settings_update = request.settings.model_dump(exclude_none=True)
+        
+        if request.settings.max_attempts is None and "max_attempts" not in settings_update:
+            pass
+        
+        current_settings.update(settings_update)
+        exam.settings_json = current_settings
+        has_changes = True
+    
     if has_changes:
         exam.updated_at = datetime.now(timezone.utc)
         await db.commit()
