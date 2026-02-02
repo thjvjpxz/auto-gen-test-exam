@@ -1,6 +1,5 @@
 """Exam API endpoints for generation, retrieval, and management."""
 
-from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -333,7 +332,6 @@ async def update_exam(
         has_changes = True
     
     if has_changes:
-        exam.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(exam)
     

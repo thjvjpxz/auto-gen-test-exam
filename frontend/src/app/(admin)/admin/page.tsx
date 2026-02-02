@@ -7,33 +7,45 @@ import {
   ClipboardList,
   ArrowRight,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExams } from "@/hooks/exam";
+import { useAdminStats } from "@/hooks/admin";
 
 export default function AdminDashboard() {
-  const { data: examsData, isLoading } = useExams({ limit: 5 });
+  const { data: examsData, isLoading: examsLoading } = useExams({ limit: 5 });
+  const { data: statsData, isLoading: statsLoading } = useAdminStats();
+
+  const isLoading = examsLoading || statsLoading;
 
   const stats = [
     {
       title: "Tổng đề thi",
-      value: examsData?.total ?? 0,
+      value: statsData?.total_exams ?? 0,
       icon: FileText,
       gradient: "from-blue-500 to-cyan-500",
       bgGradient: "from-blue-50 to-cyan-50",
     },
     {
       title: "Đã xuất bản",
-      value: examsData?.items?.filter((e) => e.is_published).length ?? 0,
+      value: statsData?.published_exams ?? 0,
       icon: TrendingUp,
       gradient: "from-green-500 to-emerald-500",
       bgGradient: "from-green-50 to-emerald-50",
     },
     {
-      title: "Bản nháp",
-      value: examsData?.items?.filter((e) => !e.is_published).length ?? 0,
+      title: "Người dùng",
+      value: statsData?.total_users ?? 0,
+      icon: Users,
+      gradient: "from-purple-500 to-pink-500",
+      bgGradient: "from-purple-50 to-pink-50",
+    },
+    {
+      title: "Lượt làm bài",
+      value: statsData?.total_attempts ?? 0,
       icon: ClipboardList,
       gradient: "from-amber-500 to-orange-500",
       bgGradient: "from-amber-50 to-orange-50",
@@ -64,7 +76,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (

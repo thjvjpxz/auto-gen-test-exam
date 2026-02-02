@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
-  Settings,
   List,
   ChevronLeft,
   ChevronRight,
   GraduationCap,
   Sparkles,
   X,
+  Users,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -44,9 +45,14 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    title: "Cài đặt",
-    href: "/admin/settings",
-    icon: Settings,
+    title: "Người dùng",
+    href: "/admin/users",
+    icon: Users,
+  },
+  {
+    title: "Bài làm",
+    href: "/admin/attempts",
+    icon: ClipboardList,
   },
 ];
 

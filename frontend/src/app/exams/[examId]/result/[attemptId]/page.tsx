@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Trophy, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,19 @@ import { useAuthStore } from "@/stores/auth";
 export default function ExamResultPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const attemptId = Number(params.attemptId);
+
+  const backUrl = useMemo(() => {
+    const from = searchParams.get("from");
+    if (from?.startsWith("/")) {
+      return from;
+    }
+    if (from === "admin") {
+      return "/admin/attempts";
+    }
+    return "/exams";
+  }, [searchParams]);
 
   const { isAuthenticated, isLoading: authLoading } = useAuthStore();
   const { data: result, isLoading, error } = useExamResult(attemptId);
@@ -56,7 +68,7 @@ export default function ExamResultPage() {
             <p className="mb-6 text-muted-foreground">
               Kết quả bài thi không tồn tại hoặc bạn không có quyền truy cập.
             </p>
-            <Link href="/exams">
+            <Link href={backUrl}>
               <Button className="glow-effect cursor-pointer transition-all duration-200 hover:scale-[1.02]">
                 <ArrowLeft className="mr-2 size-4" />
                 Quay lại danh sách
@@ -74,7 +86,7 @@ export default function ExamResultPage() {
       <header className="animate-fade-in-down sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <Link
-            href="/exams"
+            href={backUrl}
             className="group flex items-center gap-2 transition-colors duration-200 hover:text-primary"
           >
             <div className="flex size-8 items-center justify-center rounded-md bg-primary transition-transform duration-200 group-hover:scale-105">
@@ -85,7 +97,7 @@ export default function ExamResultPage() {
             </span>
           </Link>
 
-          <Link href="/exams">
+          <Link href={backUrl}>
             <Button
               variant="outline"
               className="group cursor-pointer transition-all duration-200 hover:border-primary/50"
