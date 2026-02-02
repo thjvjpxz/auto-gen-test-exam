@@ -19,7 +19,7 @@ from app.models.user import User, UserRole
 
 
 async def seed_admin_user() -> None:
-    """Tạo admin user mặc định, xóa và tạo lại nếu đã tồn tại."""
+    """Tạo hoặc update admin user mặc định, giữ nguyên data liên quan."""
     settings = get_settings()
 
     async with SessionLocal() as session:
@@ -28,16 +28,19 @@ async def seed_admin_user() -> None:
         existing_admin = result.scalar_one_or_none()
 
         if existing_admin is not None:
-            await session.delete(existing_admin)
-            await session.commit()
+            existing_admin.password_hash = hash_password(settings.admin_password)
+            existing_admin.name = settings.admin_name
+            existing_admin.role = UserRole.ADMIN
+            existing_admin.is_deleted = False
+        else:
+            admin = User(
+                email=settings.admin_email,
+                name=settings.admin_name,
+                password_hash=hash_password(settings.admin_password),
+                role=UserRole.ADMIN,
+            )
+            session.add(admin)
 
-        admin = User(
-            email=settings.admin_email,
-            name=settings.admin_name,
-            password_hash=hash_password(settings.admin_password),
-            role=UserRole.ADMIN,
-        )
-        session.add(admin)
         await session.commit()
 
 
