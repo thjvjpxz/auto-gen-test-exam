@@ -1,7 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+def _utc_now() -> datetime:
+    """Return current UTC time as naive datetime for TIMESTAMP WITHOUT TIME ZONE."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Base(DeclarativeBase):
@@ -15,12 +20,12 @@ class TimestampMixin:
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        server_default=func.current_timestamp(),
+        default=_utc_now,
         nullable=False,
     )
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime,
-        onupdate=func.current_timestamp(),
+        onupdate=_utc_now,
         nullable=True,
     )
 

@@ -229,7 +229,6 @@ async def start_exam_attempt(
                 existing_attempt.percentage = 0
             
             existing_attempt.status = AttemptStatus.GRADED
-            existing_attempt.updated_at = datetime.now(timezone.utc)
             
             await db.commit()
             
@@ -342,7 +341,6 @@ async def save_attempt_answers(
                 current_answers["testing_part"][key] = value
 
     attempt.answers_json = current_answers
-    attempt.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(attempt)
@@ -445,7 +443,6 @@ async def submit_exam_attempt(
     attempt.percentage = grading_result.percentage
     attempt.ai_grading_json = grading_result.model_dump()
     attempt.status = AttemptStatus.GRADED
-    attempt.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(attempt)
@@ -731,7 +728,6 @@ async def log_violation(
         timestamp=request.timestamp,
         details=request.details,
     )
-    attempt.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(attempt)

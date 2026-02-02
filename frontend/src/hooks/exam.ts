@@ -171,8 +171,9 @@ export function usePublishExam() {
 
   return useMutation({
     mutationFn: (examId: number) => examService.publishExam(examId),
-    onSuccess: () => {
+    onSuccess: (_, examId) => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["exam", examId] });
     },
   });
 }
@@ -185,8 +186,9 @@ export function useUnpublishExam() {
 
   return useMutation({
     mutationFn: (examId: number) => examService.unpublishExam(examId),
-    onSuccess: () => {
+    onSuccess: (_, examId) => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["exam", examId] });
     },
   });
 }
