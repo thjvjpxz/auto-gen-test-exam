@@ -8,6 +8,12 @@ import {
   CheckCircle,
   BookOpen,
   Search,
+  Trophy,
+  Target,
+  Calendar,
+  XCircle,
+  Eye,
+  RotateCcw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -156,23 +162,95 @@ interface ExamCardProps {
   onStart: () => void;
 }
 
+/**
+ * Displays an individual exam card with adaptive UI based on user's attempt status.
+ */
 function ExamCard({ exam, getExamTypeBadge, onStart }: ExamCardProps) {
+  const router = useRouter();
+
+  const isCompleted =
+    exam.last_attempt_status === "submitted" ||
+    exam.last_attempt_status === "graded";
+  const isInProgress = exam.last_attempt_status === "in_progress";
+
+  const score = exam.last_attempt_score ?? 0;
+  const passed = isCompleted && score >= exam.passing_score;
+
+  const handleViewResult = () => {
+    if (exam.last_attempt_id) {
+      router.push(`/exams/${exam.id}/result/${exam.last_attempt_id}`);
+    }
+  };
+
+  const getBorderColor = () => {
+    if (!isCompleted) return "border-border";
+    return passed
+      ? "border-green-500/50 hover:border-green-500/70"
+      : "border-amber-500/50 hover:border-amber-500/70";
+  };
+
+  const getScoreBadgeClasses = () => {
+    if (passed) {
+      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    }
+    return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+  };
+
+  const formatRelativeTime = (dateString: string | null | undefined) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) return `${diffMins} phút trước`;
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    if (diffDays === 1) return "Hôm qua";
+    if (diffDays < 7) return `${diffDays} ngày trước`;
+    return date.toLocaleDateString("vi-VN");
+  };
+
   return (
     <motion.div variants={springItem}>
-      <Card className="hover-lift group flex cursor-pointer flex-col overflow-hidden border-2 transition-all duration-300 hover:border-primary/30">
-        <div className="h-1 w-full bg-gradient-to-r from-primary via-primary/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <Card
+        className={`hover-lift group flex cursor-pointer flex-col overflow-hidden border-2 transition-all duration-300 ${getBorderColor()}`}
+      >
+        <div
+          className={`h-1 w-full transition-opacity duration-300 ${
+            isCompleted
+              ? passed
+                ? "bg-gradient-to-r from-green-500 via-emerald-500 to-green-400 opacity-100"
+                : "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400 opacity-100"
+              : "bg-gradient-to-r from-primary via-primary/60 to-transparent opacity-0 group-hover:opacity-100"
+          }`}
+        />
 
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <h3 className="line-clamp-2 text-lg font-semibold transition-colors duration-200 group-hover:text-primary">
               {exam.title}
             </h3>
-            <Badge
-              variant="secondary"
-              className="shrink-0 transition-all duration-200 group-hover:bg-primary/10 group-hover:text-primary"
-            >
-              {getExamTypeBadge(exam.exam_type)}
-            </Badge>
+            {isCompleted ? (
+              <div
+                className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-semibold ${getScoreBadgeClasses()}`}
+              >
+                {passed ? (
+                  <Trophy className="size-3.5" />
+                ) : (
+                  <Target className="size-3.5" />
+                )}
+                <span>{Math.round(score)}%</span>
+              </div>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="shrink-0 transition-all duration-200 group-hover:bg-primary/10 group-hover:text-primary"
+              >
+                {getExamTypeBadge(exam.exam_type)}
+              </Badge>
+            )}
           </div>
           {exam.subject && (
             <p className="mt-1 text-sm text-muted-foreground">{exam.subject}</p>
@@ -180,26 +258,94 @@ function ExamCard({ exam, getExamTypeBadge, onStart }: ExamCardProps) {
         </CardHeader>
 
         <CardContent className="flex-1 pb-4">
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5 transition-colors duration-200 group-hover:text-foreground">
-              <Clock className="size-4" />
-              <span>{exam.duration} phút</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              {isCompleted ? (
+                <>
+                  <div className="flex items-center gap-1.5 transition-colors duration-200 group-hover:text-foreground">
+                    <Calendar className="size-4" />
+                    <span>{formatRelativeTime(exam.last_attempt_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {passed ? (
+                      <>
+                        <CheckCircle className="size-4 text-green-600" />
+                        <span className="font-medium text-green-700 dark:text-green-400">
+                          ĐẬU
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="size-4 text-amber-600" />
+                        <span className="font-medium text-amber-700 dark:text-amber-400">
+                          CHƯA ĐẠT
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5 transition-colors duration-200 group-hover:text-foreground">
+                    <Clock className="size-4" />
+                    <span>{exam.duration} phút</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 transition-colors duration-200 group-hover:text-foreground">
+                    <CheckCircle className="size-4" />
+                    <span>Đạt: {exam.passing_score}%</span>
+                  </div>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-1.5 transition-colors duration-200 group-hover:text-foreground">
-              <CheckCircle className="size-4" />
-              <span>Đạt: {exam.passing_score}%</span>
-            </div>
+            {isCompleted &&
+              exam.recent_attempt_score != null &&
+              exam.recent_attempt_score !== exam.last_attempt_score && (
+                <p className="text-xs text-muted-foreground/70">
+                  Lần thử gần nhất: {Math.round(exam.recent_attempt_score)}% (
+                  {formatRelativeTime(exam.recent_attempt_at)})
+                </p>
+              )}
           </div>
         </CardContent>
 
-        <CardFooter className="pt-0">
-          <Button
-            onClick={onStart}
-            className="glow-effect w-full cursor-pointer bg-primary transition-all duration-200 hover:scale-[1.01]"
-          >
-            <Play className="mr-2 size-4" />
-            Bắt đầu thi
-          </Button>
+        <CardFooter className="gap-2 pt-0">
+          {isCompleted ? (
+            <>
+              <Button
+                onClick={handleViewResult}
+                variant="outline"
+                className="flex-1 cursor-pointer border-primary/30 transition-all duration-200 hover:scale-[1.01] hover:border-primary hover:bg-primary/5 hover:text-primary"
+              >
+                <Eye className="mr-2 size-4" />
+                Xem chi tiết
+              </Button>
+              <Button
+                onClick={onStart}
+                variant="ghost"
+                size="icon"
+                className="cursor-pointer transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                title="Làm lại"
+              >
+                <RotateCcw className="size-4" />
+              </Button>
+            </>
+          ) : isInProgress ? (
+            <Button
+              onClick={onStart}
+              className="glow-effect w-full cursor-pointer bg-amber-500 transition-all duration-200 hover:scale-[1.01] hover:bg-amber-600"
+            >
+              <Play className="mr-2 size-4" />
+              Tiếp tục làm bài
+            </Button>
+          ) : (
+            <Button
+              onClick={onStart}
+              className="glow-effect w-full cursor-pointer bg-primary transition-all duration-200 hover:scale-[1.01]"
+            >
+              <Play className="mr-2 size-4" />
+              Bắt đầu thi
+            </Button>
+          )}
         </CardFooter>
       </Card>
     </motion.div>

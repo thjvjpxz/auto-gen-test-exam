@@ -124,6 +124,31 @@ class ExamListOut(BaseModel):
     is_published: bool
     created_at: datetime
 
+    last_attempt_status: str | None = Field(
+        default=None,
+        description="User's best attempt status (in_progress if no completed, otherwise graded/submitted)",
+    )
+    last_attempt_score: float | None = Field(
+        default=None,
+        description="User's BEST score from all completed attempts (percentage, highest wins)",
+    )
+    last_attempt_id: int | None = Field(
+        default=None,
+        description="ID of the user's best attempt (highest score)",
+    )
+    last_attempt_at: datetime | None = Field(
+        default=None,
+        description="Timestamp of the user's best attempt submission",
+    )
+    recent_attempt_score: float | None = Field(
+        default=None,
+        description="Score of user's most recent attempt (only if different from best)",
+    )
+    recent_attempt_at: datetime | None = Field(
+        default=None,
+        description="Timestamp of user's most recent attempt (only if different from best)",
+    )
+
     model_config = ConfigDict(from_attributes=True)
 
 
