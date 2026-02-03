@@ -10,6 +10,7 @@ import {
   Home,
   LayoutDashboard,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth";
+import { fadeInDown } from "@/lib/motion";
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
@@ -35,7 +37,12 @@ export function AdminHeader({ onMenuClick, showMenuButton }: AdminHeaderProps) {
   };
 
   return (
-    <header className="animate-fade-in-down sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur-md">
+    <motion.header
+      variants={fadeInDown}
+      initial="hidden"
+      animate="visible"
+      className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur-md"
+    >
       <div className="flex items-center gap-4">
         {showMenuButton && (
           <Button
@@ -121,6 +128,6 @@ export function AdminHeader({ onMenuClick, showMenuButton }: AdminHeaderProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
+    </motion.header>
   );
 }

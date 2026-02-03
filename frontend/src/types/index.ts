@@ -280,6 +280,12 @@ export interface ExamListItem {
   ai_generated: boolean;
   is_published: boolean;
   created_at: string;
+  last_attempt_status?: string | null;
+  last_attempt_score?: number | null;
+  last_attempt_id?: number | null;
+  last_attempt_at?: string | null;
+  recent_attempt_score?: number | null;
+  recent_attempt_at?: string | null;
 }
 
 export interface ExamListResponse {

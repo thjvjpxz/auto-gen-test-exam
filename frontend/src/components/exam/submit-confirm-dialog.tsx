@@ -54,7 +54,7 @@ export function SubmitConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md animate-fade-in-scale overflow-hidden border-0 p-0 shadow-2xl">
+      <AlertDialogContent className="max-w-md overflow-hidden border-0 p-0 shadow-2xl">
         {/* Top accent bar */}
         <div className="h-1.5 bg-gradient-to-r from-primary via-primary/60 to-accent" />
 

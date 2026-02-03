@@ -15,6 +15,7 @@ import {
   Calendar,
   Sparkles,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +42,7 @@ import { ExamBasicInfoEditor } from "@/components/admin/exam-basic-info-editor";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import type { ExamType } from "@/types";
+import { fadeInDown, springItem } from "@/lib/motion";
 
 const examTypeLabels: Record<ExamType, string> = {
   sql_testing: "SQL + Testing",
@@ -147,19 +149,26 @@ export default function ExamDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       {/* Back Button */}
-      <Button
-        variant="ghost"
-        asChild
-        className="animate-fade-in -ml-2 cursor-pointer text-muted-foreground transition-all duration-200 hover:text-foreground"
-      >
-        <Link href="/admin/exams">
-          <ArrowLeft className="mr-2 size-4" />
-          Quay lại danh sách
-        </Link>
-      </Button>
+      <motion.div variants={fadeInDown} initial="hidden" animate="visible">
+        <Button
+          variant="ghost"
+          asChild
+          className="-ml-2 cursor-pointer text-muted-foreground transition-all duration-200 hover:text-foreground"
+        >
+          <Link href="/admin/exams">
+            <ArrowLeft className="mr-2 size-4" />
+            Quay lại danh sách
+          </Link>
+        </Button>
+      </motion.div>
 
       {/* Header */}
-      <div className="animate-fade-in-down flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <motion.div
+        variants={fadeInDown}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+      >
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <h1 className="font-heading text-3xl font-bold text-foreground">
@@ -235,182 +244,186 @@ export default function ExamDetailPage({ params }: PageProps) {
             Xóa
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       <Separator />
 
       {/* Content Tabs */}
-      <Tabs defaultValue="overview" className="animate-fade-in-up space-y-6">
-        <TabsList className="w-full justify-start bg-muted/50">
-          <TabsTrigger
-            value="overview"
-            className="cursor-pointer data-[state=active]:bg-background"
-          >
-            Tổng quan
-          </TabsTrigger>
-          {exam.exam_data?.sql_part && (
+      <motion.div variants={springItem} initial="hidden" animate="visible">
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="w-full justify-start bg-muted/50">
             <TabsTrigger
-              value="sql"
+              value="overview"
               className="cursor-pointer data-[state=active]:bg-background"
             >
-              <Database className="mr-2 size-4" />
-              Phần SQL
+              Tổng quan
             </TabsTrigger>
-          )}
-          {exam.exam_data?.testing_part && (
-            <TabsTrigger
-              value="testing"
-              className="cursor-pointer data-[state=active]:bg-background"
-            >
-              <TestTube className="mr-2 size-4" />
-              Phần Testing
-            </TabsTrigger>
-          )}
-        </TabsList>
+            {exam.exam_data?.sql_part && (
+              <TabsTrigger
+                value="sql"
+                className="cursor-pointer data-[state=active]:bg-background"
+              >
+                <Database className="mr-2 size-4" />
+                Phần SQL
+              </TabsTrigger>
+            )}
+            {exam.exam_data?.testing_part && (
+              <TabsTrigger
+                value="testing"
+                className="cursor-pointer data-[state=active]:bg-background"
+              >
+                <TestTube className="mr-2 size-4" />
+                Phần Testing
+              </TabsTrigger>
+            )}
+          </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Basic Info Editor */}
-          <ExamBasicInfoEditor
-            examId={examId}
-            title={exam.title}
-            subject={exam.subject}
-            duration={exam.duration}
-            passingScore={exam.passing_score}
-          />
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Basic Info Editor */}
+            <ExamBasicInfoEditor
+              examId={examId}
+              title={exam.title}
+              subject={exam.subject}
+              duration={exam.duration}
+              passingScore={exam.passing_score}
+            />
 
-          {/* Exam Settings Editor */}
-          <ExamSettingsEditor examId={examId} settings={exam.settings} />
-        </TabsContent>
-
-        {/* SQL Tab */}
-        {exam.exam_data?.sql_part && (
-          <TabsContent value="sql" className="space-y-6">
-            {/* ERD Diagram */}
-            <Card className="overflow-hidden border-0 shadow-sm">
-              <CardHeader className="border-b bg-muted/30">
-                <CardTitle className="flex items-center gap-2 text-base font-medium">
-                  <Database className="size-4 text-primary" />
-                  Sơ đồ ERD
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <MermaidRenderer
-                  chart={
-                    exam.exam_data.sql_part.mermaid_code ??
-                    exam.exam_data.sql_part.erd_diagram ??
-                    ""
-                  }
-                />
-              </CardContent>
-            </Card>
-
-            {/* SQL Questions */}
-            <Card className="overflow-hidden border-0 shadow-sm">
-              <CardHeader className="border-b bg-muted/30">
-                <CardTitle className="text-base font-medium">
-                  Câu hỏi SQL ({exam.exam_data.sql_part.questions?.length ?? 0}{" "}
-                  câu)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-3">
-                  {(exam.exam_data.sql_part.questions ?? []).map(
-                    (question, index) => (
-                      <div
-                        key={index}
-                        className="group rounded-lg border bg-muted/30 p-4 transition-all duration-200 hover:bg-muted/50"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-medium text-white shadow-sm">
-                            {index + 1}
-                          </span>
-                          <p className="whitespace-pre-wrap text-foreground">
-                            {question}
-                          </p>
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Exam Settings Editor */}
+            <ExamSettingsEditor examId={examId} settings={exam.settings} />
           </TabsContent>
-        )}
 
-        {/* Testing Tab */}
-        {exam.exam_data?.testing_part && (
-          <TabsContent value="testing" className="space-y-6">
-            {/* Scenario */}
-            <Card className="overflow-hidden border-0 shadow-sm">
-              <CardHeader className="border-b bg-muted/30">
-                <CardTitle className="flex items-center gap-2 text-base font-medium">
-                  <TestTube className="size-4 text-primary" />
-                  Kịch bản kiểm thử
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <p className="whitespace-pre-wrap leading-relaxed text-foreground">
-                  {exam.exam_data.testing_part.scenario}
-                </p>
-              </CardContent>
-            </Card>
+          {/* SQL Tab */}
+          {exam.exam_data?.sql_part && (
+            <TabsContent value="sql" className="space-y-6">
+              {/* ERD Diagram */}
+              <Card className="overflow-hidden border-0 shadow-sm">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="flex items-center gap-2 text-base font-medium">
+                    <Database className="size-4 text-primary" />
+                    Sơ đồ ERD
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <MermaidRenderer
+                    chart={
+                      exam.exam_data.sql_part.mermaid_code ??
+                      exam.exam_data.sql_part.erd_diagram ??
+                      ""
+                    }
+                  />
+                </CardContent>
+              </Card>
 
-            {/* Rules Table */}
-            <Card className="overflow-hidden border-0 shadow-sm">
-              <CardHeader className="border-b bg-muted/30">
-                <CardTitle className="text-base font-medium">
-                  Bảng quy tắc
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead className="font-semibold text-foreground">
-                        Điều kiện
-                      </TableHead>
-                      <TableHead className="font-semibold text-foreground">
-                        Kết quả
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(exam.exam_data.testing_part.rules_table ?? []).map(
-                      (rule, index) => (
-                        <TableRow
+              {/* SQL Questions */}
+              <Card className="overflow-hidden border-0 shadow-sm">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="text-base font-medium">
+                    Câu hỏi SQL (
+                    {exam.exam_data.sql_part.questions?.length ?? 0} câu)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="space-y-3">
+                    {(exam.exam_data.sql_part.questions ?? []).map(
+                      (question, index) => (
+                        <div
                           key={index}
-                          className="transition-colors duration-150 hover:bg-muted/50"
+                          className="group rounded-lg border bg-muted/30 p-4 transition-all duration-200 hover:bg-muted/50"
+                          style={{ animationDelay: `${index * 50}ms` }}
                         >
-                          <TableCell className="text-foreground">
-                            {rule.condition}
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {rule.result}
-                          </TableCell>
-                        </TableRow>
+                          <div className="flex items-start gap-3">
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-medium text-white shadow-sm">
+                              {index + 1}
+                            </span>
+                            <p className="whitespace-pre-wrap text-foreground">
+                              {question}
+                            </p>
+                          </div>
+                        </div>
                       ),
                     )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
-            {/* Question */}
-            <Card className="overflow-hidden border-0 shadow-sm">
-              <CardHeader className="border-b bg-muted/30">
-                <CardTitle className="text-base font-medium">Câu hỏi</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <p className="whitespace-pre-wrap text-foreground">
-                  {exam.exam_data.testing_part.question}
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+          {/* Testing Tab */}
+          {exam.exam_data?.testing_part && (
+            <TabsContent value="testing" className="space-y-6">
+              {/* Scenario */}
+              <Card className="overflow-hidden border-0 shadow-sm">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="flex items-center gap-2 text-base font-medium">
+                    <TestTube className="size-4 text-primary" />
+                    Kịch bản kiểm thử
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+                    {exam.exam_data.testing_part.scenario}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Rules Table */}
+              <Card className="overflow-hidden border-0 shadow-sm">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="text-base font-medium">
+                    Bảng quy tắc
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="font-semibold text-foreground">
+                          Điều kiện
+                        </TableHead>
+                        <TableHead className="font-semibold text-foreground">
+                          Kết quả
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(exam.exam_data.testing_part.rules_table ?? []).map(
+                        (rule, index) => (
+                          <TableRow
+                            key={index}
+                            className="transition-colors duration-150 hover:bg-muted/50"
+                          >
+                            <TableCell className="text-foreground">
+                              {rule.condition}
+                            </TableCell>
+                            <TableCell className="text-foreground">
+                              {rule.result}
+                            </TableCell>
+                          </TableRow>
+                        ),
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Question */}
+              <Card className="overflow-hidden border-0 shadow-sm">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="text-base font-medium">
+                    Câu hỏi
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <p className="whitespace-pre-wrap text-foreground">
+                    {exam.exam_data.testing_part.question}
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+        </Tabs>
+      </motion.div>
     </div>
   );
 }

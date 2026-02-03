@@ -7,7 +7,8 @@ import {
   BarChart3,
   type LucideIcon,
 } from "lucide-react";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { motion } from "framer-motion";
+import { staggerContainer, springItem, defaultViewport } from "@/lib/motion";
 
 interface Feature {
   icon: LucideIcon;
@@ -42,44 +43,35 @@ const FEATURES: Feature[] = [
   },
 ];
 
+/**
+ * Features section with staggered card animations using Framer Motion.
+ */
 export function FeaturesSection() {
-  const [sectionRef, isRevealed] = useScrollReveal<HTMLElement>({
-    threshold: 0.1,
-    rootMargin: "0px 0px -100px 0px",
-  });
-
   return (
-    <section id="features" ref={sectionRef} className="px-6 py-24">
-      <div className="mx-auto max-w-6xl">
-        {/* Section header */}
-        <div
-          className={`mb-16 text-center transition-all duration-700 ease-out ${
-            isRevealed ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-          }`}
-        >
+    <section id="features" className="px-6 py-24">
+      <motion.div
+        className="mx-auto max-w-6xl"
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="visible"
+        viewport={defaultViewport}
+      >
+        <motion.div variants={springItem} className="mb-16 text-center">
           <h2 className="mb-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Tính năng nổi bật
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Mọi thứ bạn cần để tổ chức thi trực tuyến hiệu quả và chuyên nghiệp
           </p>
-        </div>
+        </motion.div>
 
-        {/* Feature cards with staggered animation */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((feature, index) => (
-            <article
+          {FEATURES.map((feature) => (
+            <motion.article
               key={feature.title}
-              className={`hover-lift group cursor-pointer rounded-lg border border-border bg-card p-6 transition-all duration-500 ease-out hover:border-primary/30 hover:bg-primary/5 ${
-                isRevealed
-                  ? "translate-y-0 opacity-100"
-                  : "translate-y-12 opacity-0"
-              }`}
-              style={{
-                transitionDelay: isRevealed ? `${index * 100 + 200}ms` : "0ms",
-              }}
+              variants={springItem}
+              className="hover-lift group cursor-pointer rounded-lg border border-border bg-card p-6 transition-colors duration-300 hover:border-primary/30 hover:bg-primary/5"
             >
-              {/* Icon with animated background */}
               <div className="icon-bounce mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
                 <feature.icon className="size-6" />
               </div>
@@ -91,10 +83,10 @@ export function FeaturesSection() {
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {feature.description}
               </p>
-            </article>
+            </motion.article>
           ))}
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

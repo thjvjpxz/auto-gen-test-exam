@@ -117,7 +117,7 @@ export function MermaidRenderer({
 
   if (error) {
     return (
-      <Alert variant="destructive" className="animate-fade-in-scale">
+      <Alert variant="destructive">
         <AlertCircle className="size-4" />
         <AlertDescription className="flex items-center justify-between">
           <span>{error}</span>
@@ -151,7 +151,7 @@ export function MermaidRenderer({
       <div
         ref={containerRef}
         className={`overflow-auto rounded-lg border border-border bg-white p-4 transition-opacity duration-300 ${
-          isLoading ? "opacity-0" : "animate-fade-in-scale opacity-100"
+          isLoading ? "opacity-0" : "opacity-100"
         }`}
         style={{ minHeight: isLoading ? "200px" : "auto" }}
       />

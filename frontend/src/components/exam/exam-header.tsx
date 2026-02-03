@@ -7,10 +7,12 @@ import {
   Loader2,
   GraduationCap,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SaveIndicator } from "./save-indicator";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
+import { fadeInDown, fadeInScale } from "@/lib/motion";
 
 interface ExamHeaderProps {
   examTitle: string;
@@ -46,9 +48,13 @@ export function ExamHeader({
   const hasWarning = warningLevel !== "none";
 
   return (
-    <header className="animate-fade-in-down sticky top-0 z-50 border-b border-border bg-background/95 shadow-sm backdrop-blur-sm">
+    <motion.header
+      variants={fadeInDown}
+      initial="hidden"
+      animate="visible"
+      className="sticky top-0 z-50 border-b border-border bg-background/95 shadow-sm backdrop-blur-sm"
+    >
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
-        {/* Left: Logo + Title */}
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary shadow-sm transition-transform duration-200 hover:scale-105">
             <GraduationCap className="size-5 text-primary-foreground" />
@@ -59,22 +65,25 @@ export function ExamHeader({
             </h1>
           </div>
           {hasWarning && (
-            <div className="animate-fade-in-scale flex items-center gap-1.5 rounded-full bg-yellow-100 px-2.5 py-1 text-yellow-700">
+            <motion.div
+              variants={fadeInScale}
+              initial="hidden"
+              animate="visible"
+              className="flex items-center gap-1.5 rounded-full bg-yellow-100 px-2.5 py-1 text-yellow-700"
+            >
               <AlertTriangle className="size-3.5" />
               <span className="hidden text-xs font-medium sm:inline">
                 Cảnh báo
               </span>
-            </div>
+            </motion.div>
           )}
         </div>
 
-        {/* Center: Timer */}
         <div className={timerClasses}>
           <Timer className={cn("size-5", isUrgent && "animate-pulse")} />
           <span className="tabular-nums">{formattedTime}</span>
         </div>
 
-        {/* Right: Save indicator + Submit */}
         <div className="flex items-center gap-3 sm:gap-4">
           <SaveIndicator />
           <Button
@@ -97,6 +106,6 @@ export function ExamHeader({
           </Button>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

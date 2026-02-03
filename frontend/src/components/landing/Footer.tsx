@@ -1,7 +1,8 @@
 "use client";
 
 import { BookOpen, Github, Mail, Linkedin } from "lucide-react";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { motion } from "framer-motion";
+import { springItem, defaultViewport } from "@/lib/motion";
 
 const FOOTER_LINKS = [
   { href: "#features", label: "Tính năng" },
@@ -15,33 +16,28 @@ const SOCIAL_LINKS = [
   { href: "https://linkedin.com", icon: Linkedin, label: "LinkedIn" },
 ];
 
+/**
+ * Footer component with fade-in animation using Framer Motion.
+ */
 export function Footer() {
   const currentYear = new Date().getFullYear();
-  const [footerRef, isRevealed] = useScrollReveal<HTMLElement>({
-    threshold: 0.2,
-    rootMargin: "0px 0px -20px 0px",
-  });
 
   return (
-    <footer
-      ref={footerRef}
-      className="border-t border-border bg-card px-6 py-12"
-    >
-      <div className="mx-auto max-w-6xl">
-        <div
-          className={`flex flex-col gap-8 transition-all duration-700 ease-out ${
-            isRevealed ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-          }`}
-        >
-          {/* Main footer content */}
+    <footer className="border-t border-border bg-card px-6 py-12">
+      <motion.div
+        className="mx-auto max-w-6xl"
+        variants={springItem}
+        initial="hidden"
+        whileInView="visible"
+        viewport={defaultViewport}
+      >
+        <div className="flex flex-col gap-8">
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-            {/* Logo */}
             <div className="group flex items-center gap-2 text-lg font-semibold text-foreground">
               <BookOpen className="size-5 text-primary transition-transform duration-200 group-hover:scale-110" />
               <span>IT Exam System</span>
             </div>
 
-            {/* Navigation links */}
             <nav className="flex flex-wrap items-center justify-center gap-6">
               {FOOTER_LINKS.map((link) => (
                 <a
@@ -54,7 +50,6 @@ export function Footer() {
               ))}
             </nav>
 
-            {/* Social links */}
             <div className="flex items-center gap-4">
               {SOCIAL_LINKS.map((social) => (
                 <a
@@ -71,10 +66,8 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="h-px w-full bg-border" />
 
-          {/* Copyright and additional info */}
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-sm text-muted-foreground">
               © {currentYear} IT Exam System. All rights reserved.
@@ -84,7 +77,7 @@ export function Footer() {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     </footer>
   );
 }

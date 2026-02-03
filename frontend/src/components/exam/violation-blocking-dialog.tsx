@@ -31,7 +31,7 @@ export function ViolationBlockingDialog({
 
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent className="max-w-md animate-fade-in-scale overflow-hidden border-0 p-0 shadow-2xl">
+      <AlertDialogContent className="max-w-md overflow-hidden border-0 p-0 shadow-2xl">
         {/* Top accent bar with gradient */}
         <div className="h-1.5 bg-gradient-to-r from-red-500 via-red-600 to-orange-500" />
 

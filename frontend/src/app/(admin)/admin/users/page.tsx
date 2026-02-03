@@ -12,6 +12,7 @@ import {
   UserCog,
   Trash2,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ import {
 } from "@/hooks/admin";
 import type { UserListOut } from "@/services/admin";
 import { toast } from "sonner";
+import { fadeInDown } from "@/lib/motion";
 
 export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
@@ -121,14 +123,14 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="animate-fade-in-down">
+      <motion.div variants={fadeInDown} initial="hidden" animate="visible">
         <h1 className="font-heading text-3xl font-bold text-foreground">
           Quản lý người dùng
         </h1>
         <p className="mt-1 text-muted-foreground">
           Xem và quản lý tài khoản người dùng trong hệ thống
         </p>
-      </div>
+      </motion.div>
 
       {/* Filters */}
       <Card className="border-0 shadow-sm">
