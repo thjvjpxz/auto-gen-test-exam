@@ -12,24 +12,33 @@ import type {
 
 const POLL_INTERVAL = 2000;
 const MAX_POLL_ATTEMPTS = 60;
+const SMOOTH_PROGRESS_INTERVAL = 800;
+const SMOOTH_PROGRESS_MAX = 65;
 
 /**
  * Hook for exam generation with polling
  * Handles the async generation flow: start -> poll -> complete/fail
+ * Includes smooth progress simulation for better UX
  */
 export function useExamGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [status, setStatus] = useState<GenerationStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [displayProgress, setDisplayProgress] = useState(0);
   const pollCountRef = useRef(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const smoothProgressRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
 
   const stopPolling = useCallback(() => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
+    }
+    if (smoothProgressRef.current) {
+      clearInterval(smoothProgressRef.current);
+      smoothProgressRef.current = null;
     }
   }, []);
 
@@ -40,11 +49,51 @@ export function useExamGeneration() {
     };
   }, []);
 
+  const realProgress = status?.progress ?? 0;
+
+  useEffect(() => {
+    if (realProgress > displayProgress) {
+      const timer = setTimeout(() => {
+        if (isMountedRef.current) {
+          setDisplayProgress(realProgress);
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    if (realProgress === 20 && displayProgress < SMOOTH_PROGRESS_MAX) {
+      smoothProgressRef.current = setInterval(() => {
+        if (!isMountedRef.current) return;
+        setDisplayProgress((prev) => {
+          if (prev >= SMOOTH_PROGRESS_MAX) {
+            if (smoothProgressRef.current) {
+              clearInterval(smoothProgressRef.current);
+              smoothProgressRef.current = null;
+            }
+            return prev;
+          }
+          return Math.min(
+            prev + Math.floor(Math.random() * 4) + 2,
+            SMOOTH_PROGRESS_MAX,
+          );
+        });
+      }, SMOOTH_PROGRESS_INTERVAL);
+    }
+
+    return () => {
+      if (smoothProgressRef.current) {
+        clearInterval(smoothProgressRef.current);
+        smoothProgressRef.current = null;
+      }
+    };
+  }, [realProgress, displayProgress]);
+
   const startGeneration = useCallback(async (data: ExamGenerateFormData) => {
     try {
       setIsGenerating(true);
       setError(null);
       setStatus(null);
+      setDisplayProgress(0);
       pollCountRef.current = 0;
 
       const request: ExamGenerateRequest = {
@@ -125,6 +174,7 @@ export function useExamGeneration() {
     setTaskId(null);
     setStatus(null);
     setError(null);
+    setDisplayProgress(0);
     pollCountRef.current = 0;
   }, [stopPolling]);
 
@@ -132,7 +182,7 @@ export function useExamGeneration() {
     isGenerating,
     status,
     error,
-    progress: status?.progress ?? 0,
+    progress: displayProgress,
     examId: status?.exam_id,
     exam: status?.exam,
     isCompleted: status?.status === "completed",

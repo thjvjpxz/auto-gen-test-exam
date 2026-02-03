@@ -41,7 +41,7 @@ export function ExamResult({ result }: ExamResultProps) {
       {/* Overall Score Card */}
       <Card
         className={cn(
-          "animate-fade-in-scale overflow-hidden border-2 shadow-lg",
+          "overflow-hidden border-2 shadow-lg",
           passed
             ? "border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
             : "border-red-400 bg-gradient-to-br from-red-50 to-orange-50",

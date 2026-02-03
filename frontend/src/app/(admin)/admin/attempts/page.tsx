@@ -12,6 +12,7 @@ import {
   User,
   FileText,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAdminAttempts } from "@/hooks/admin";
+import { fadeInDown } from "@/lib/motion";
 
 export default function AdminAttemptsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -89,14 +91,14 @@ export default function AdminAttemptsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="animate-fade-in-down">
+      <motion.div variants={fadeInDown} initial="hidden" animate="visible">
         <h1 className="font-heading text-3xl font-bold text-foreground">
           Tất cả bài làm
         </h1>
         <p className="mt-1 text-muted-foreground">
           Xem tất cả lượt làm bài thi của người dùng
         </p>
-      </div>
+      </motion.div>
 
       {/* Filters */}
       <Card className="border-0 shadow-sm">

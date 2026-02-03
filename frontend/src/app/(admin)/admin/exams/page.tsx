@@ -14,6 +14,7 @@ import {
   Sparkles,
   Search,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -48,6 +49,7 @@ import {
 } from "@/hooks/exam";
 import type { ExamType, ExamListParams } from "@/types";
 import { toast } from "sonner";
+import { fadeInDown, springItem } from "@/lib/motion";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -125,7 +127,12 @@ export default function ExamListPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="animate-fade-in-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <motion.div
+        variants={fadeInDown}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
           <h1 className="font-heading text-3xl font-bold text-foreground">
             Danh sách đề thi
@@ -143,75 +150,80 @@ export default function ExamListPage() {
             Sinh đề mới
           </Link>
         </Button>
-      </div>
+      </motion.div>
 
       {/* Filters */}
-      <Card className="animate-fade-in-up overflow-hidden border-0 shadow-sm">
-        <CardHeader className="border-b bg-muted/30 pb-4">
-          <CardTitle className="flex items-center gap-2 text-base font-medium">
-            <Filter className="size-4 text-primary" />
-            Bộ lọc
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <Select
-              value={filters.exam_type || "all"}
-              onValueChange={(value) => handleFilterChange("exam_type", value)}
-            >
-              <SelectTrigger className="w-full cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary/20 sm:w-48">
-                <SelectValue placeholder="Loại đề thi" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="cursor-pointer">
-                  Tất cả loại
-                </SelectItem>
-                <SelectItem value="sql_testing" className="cursor-pointer">
-                  SQL + Testing
-                </SelectItem>
-                <SelectItem value="sql_only" className="cursor-pointer">
-                  Chỉ SQL
-                </SelectItem>
-                <SelectItem value="testing_only" className="cursor-pointer">
-                  Chỉ Testing
-                </SelectItem>
-              </SelectContent>
-            </Select>
+      <motion.div variants={springItem} initial="hidden" animate="visible">
+        <Card className="overflow-hidden border-0 shadow-sm">
+          <CardHeader className="border-b bg-muted/30 pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <Filter className="size-4 text-primary" />
+              Bộ lọc
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Select
+                value={filters.exam_type || "all"}
+                onValueChange={(value) =>
+                  handleFilterChange("exam_type", value)
+                }
+              >
+                <SelectTrigger className="w-full cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary/20 sm:w-48">
+                  <SelectValue placeholder="Loại đề thi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="cursor-pointer">
+                    Tất cả loại
+                  </SelectItem>
+                  <SelectItem value="sql_testing" className="cursor-pointer">
+                    SQL + Testing
+                  </SelectItem>
+                  <SelectItem value="sql_only" className="cursor-pointer">
+                    Chỉ SQL
+                  </SelectItem>
+                  <SelectItem value="testing_only" className="cursor-pointer">
+                    Chỉ Testing
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select
-              value={
-                filters.is_published === undefined
-                  ? "all"
-                  : filters.is_published
-                    ? "true"
-                    : "false"
-              }
-              onValueChange={(value) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  skip: 0,
-                  is_published: value === "all" ? undefined : value === "true",
-                }))
-              }
-            >
-              <SelectTrigger className="w-full cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary/20 sm:w-48">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="cursor-pointer">
-                  Tất cả trạng thái
-                </SelectItem>
-                <SelectItem value="true" className="cursor-pointer">
-                  Đã xuất bản
-                </SelectItem>
-                <SelectItem value="false" className="cursor-pointer">
-                  Bản nháp
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+              <Select
+                value={
+                  filters.is_published === undefined
+                    ? "all"
+                    : filters.is_published
+                      ? "true"
+                      : "false"
+                }
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    skip: 0,
+                    is_published:
+                      value === "all" ? undefined : value === "true",
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary/20 sm:w-48">
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="cursor-pointer">
+                    Tất cả trạng thái
+                  </SelectItem>
+                  <SelectItem value="true" className="cursor-pointer">
+                    Đã xuất bản
+                  </SelectItem>
+                  <SelectItem value="false" className="cursor-pointer">
+                    Bản nháp
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Table */}
       <Card className="overflow-hidden border-0 shadow-sm">
@@ -353,10 +365,7 @@ export default function ExamListPage() {
                             <MoreHorizontal className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="animate-fade-in-scale"
-                        >
+                        <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild className="cursor-pointer">
                             <Link href={`/admin/exams/${exam.id}`}>
                               <Eye className="mr-2 size-4" />

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { BookOpen, Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +14,7 @@ import {
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "next/navigation";
+import { fadeInDown } from "@/lib/motion";
 
 const NAV_LINKS = [
   { href: "#features", label: "Tính năng" },
@@ -43,7 +45,12 @@ export function LandingNavbar() {
   const isAdmin = user?.role === "admin";
 
   return (
-    <header className="fixed top-4 left-4 right-4 z-50 mx-auto max-w-6xl animate-fade-in-down">
+    <motion.header
+      className="fixed top-4 left-4 right-4 z-50 mx-auto max-w-6xl"
+      variants={fadeInDown}
+      initial="hidden"
+      animate="visible"
+    >
       <nav
         className={`flex items-center justify-between rounded-lg border px-6 py-3 backdrop-blur-md transition-all duration-300 ${
           isScrolled
@@ -257,6 +264,6 @@ export function LandingNavbar() {
           </div>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

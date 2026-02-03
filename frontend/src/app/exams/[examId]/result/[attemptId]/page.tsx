@@ -4,11 +4,13 @@ import { useEffect, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Trophy, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExamResult } from "@/components/exam/exam-result";
 import { useExamResult } from "@/hooks/attempt";
 import { useAuthStore } from "@/stores/auth";
+import { springItem, fadeInScale, fadeInDown } from "@/lib/motion";
 
 /**
  * Exam result page showing grading and AI feedback.
@@ -42,13 +44,18 @@ export default function ExamResultPage() {
   if (authLoading || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-fade-in-up space-y-4 text-center">
+        <motion.div
+          variants={springItem}
+          initial="hidden"
+          animate="visible"
+          className="space-y-4 text-center"
+        >
           <div className="relative mx-auto size-16">
             <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
             <Loader2 className="absolute inset-0 size-16 animate-spin text-primary" />
           </div>
           <p className="text-muted-foreground">Đang tải kết quả...</p>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -56,26 +63,28 @@ export default function ExamResultPage() {
   if (error || !result) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="animate-fade-in-scale w-full max-w-md overflow-hidden border-2">
-          <div className="h-1 bg-gradient-to-r from-destructive via-destructive/60 to-transparent" />
-          <CardContent className="pt-8 text-center">
-            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
-              <AlertCircle className="size-8 text-destructive" />
-            </div>
-            <h2 className="mb-2 text-xl font-semibold">
-              Không tìm thấy kết quả
-            </h2>
-            <p className="mb-6 text-muted-foreground">
-              Kết quả bài thi không tồn tại hoặc bạn không có quyền truy cập.
-            </p>
-            <Link href={backUrl}>
-              <Button className="glow-effect cursor-pointer transition-all duration-200 hover:scale-[1.02]">
-                <ArrowLeft className="mr-2 size-4" />
-                Quay lại danh sách
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <motion.div variants={fadeInScale} initial="hidden" animate="visible">
+          <Card className="w-full max-w-md overflow-hidden border-2">
+            <div className="h-1 bg-gradient-to-r from-destructive via-destructive/60 to-transparent" />
+            <CardContent className="pt-8 text-center">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
+                <AlertCircle className="size-8 text-destructive" />
+              </div>
+              <h2 className="mb-2 text-xl font-semibold">
+                Không tìm thấy kết quả
+              </h2>
+              <p className="mb-6 text-muted-foreground">
+                Kết quả bài thi không tồn tại hoặc bạn không có quyền truy cập.
+              </p>
+              <Link href={backUrl}>
+                <Button className="glow-effect cursor-pointer transition-all duration-200 hover:scale-[1.02]">
+                  <ArrowLeft className="mr-2 size-4" />
+                  Quay lại danh sách
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
@@ -83,7 +92,12 @@ export default function ExamResultPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header with animation */}
-      <header className="animate-fade-in-down sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
+      <motion.header
+        variants={fadeInDown}
+        initial="hidden"
+        animate="visible"
+        className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm"
+      >
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <Link
             href={backUrl}
@@ -107,13 +121,13 @@ export default function ExamResultPage() {
             </Button>
           </Link>
         </div>
-      </header>
+      </motion.header>
 
       {/* Result Content with animation */}
       <main className="container mx-auto max-w-4xl px-4 py-6">
-        <div className="animate-fade-in-up animation-delay-200">
+        <motion.div variants={springItem} initial="hidden" animate="visible">
           <ExamResult result={result} />
-        </div>
+        </motion.div>
       </main>
     </div>
   );

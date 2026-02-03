@@ -1,6 +1,7 @@
 "use client";
 
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { motion } from "framer-motion";
+import { staggerContainer, springItem, defaultViewport } from "@/lib/motion";
 
 const STEPS = [
   {
@@ -23,85 +24,53 @@ const STEPS = [
   },
 ];
 
-export function HowItWorksSection() {
-  const [sectionRef, isRevealed] = useScrollReveal<HTMLElement>({
-    threshold: 0.15,
-    rootMargin: "0px 0px -50px 0px",
-  });
+const lineVariants = {
+  hidden: { scaleY: 0 },
+  visible: {
+    scaleY: 1,
+    transition: { duration: 0.8, ease: "easeOut" as const },
+  },
+};
 
+/**
+ * How It Works section with timeline animation using Framer Motion.
+ */
+export function HowItWorksSection() {
   return (
-    <section
-      id="how-it-works"
-      ref={sectionRef}
-      className="bg-muted/50 px-6 py-24"
-    >
-      <div className="mx-auto max-w-4xl">
-        {/* Section header */}
-        <div
-          className={`mb-16 text-center transition-all duration-700 ease-out ${
-            isRevealed ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-          }`}
-        >
+    <section id="how-it-works" className="bg-muted/50 px-6 py-24">
+      <motion.div
+        className="mx-auto max-w-4xl"
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="visible"
+        viewport={defaultViewport}
+      >
+        <motion.div variants={springItem} className="mb-16 text-center">
           <h2 className="mb-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Cách hoạt động
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Chỉ với 3 bước đơn giản để bắt đầu tổ chức thi trực tuyến
           </p>
-        </div>
+        </motion.div>
 
-        {/* Timeline with animated steps */}
         <div className="relative">
-          {/* Timeline line with growing animation */}
-          <div
-            className={`absolute left-8 top-0 hidden h-full w-px origin-top bg-gradient-to-b from-primary via-primary/50 to-transparent transition-transform duration-1000 ease-out md:block ${
-              isRevealed ? "scale-y-100" : "scale-y-0"
-            }`}
+          <motion.div
+            variants={lineVariants}
+            className="absolute left-8 top-0 hidden h-full w-px origin-top bg-gradient-to-b from-primary via-primary/50 to-transparent md:block"
           />
 
           <div className="space-y-12">
-            {STEPS.map((step, index) => (
-              <div
+            {STEPS.map((step) => (
+              <motion.div
                 key={step.number}
-                className={`relative flex gap-6 transition-all duration-700 ease-out md:gap-12 ${
-                  isRevealed
-                    ? "translate-x-0 opacity-100"
-                    : "-translate-x-8 opacity-0"
-                }`}
-                style={{
-                  transitionDelay: isRevealed
-                    ? `${index * 200 + 300}ms`
-                    : "0ms",
-                }}
+                variants={springItem}
+                className="relative flex gap-6 md:gap-12"
               >
-                {/* Step number badge */}
-                <div
-                  className={`relative z-10 flex size-16 shrink-0 items-center justify-center rounded-lg border-2 border-primary bg-card font-heading text-xl font-bold text-primary shadow-lg transition-all duration-500 ${
-                    isRevealed ? "scale-100" : "scale-75"
-                  }`}
-                  style={{
-                    transitionDelay: isRevealed
-                      ? `${index * 200 + 400}ms`
-                      : "0ms",
-                  }}
-                >
+                <div className="relative z-10 flex size-16 shrink-0 items-center justify-center rounded-lg border-2 border-primary bg-card font-heading text-xl font-bold text-primary shadow-lg">
                   {step.number}
-                  {/* Pulse ring effect */}
-                  <div
-                    className={`absolute inset-0 rounded-lg border-2 border-primary transition-all duration-1000 ${
-                      isRevealed
-                        ? "scale-125 opacity-0"
-                        : "scale-100 opacity-100"
-                    }`}
-                    style={{
-                      transitionDelay: isRevealed
-                        ? `${index * 200 + 600}ms`
-                        : "0ms",
-                    }}
-                  />
                 </div>
 
-                {/* Step content */}
                 <div className="flex-1 pt-2">
                   <h3 className="mb-2 font-heading text-xl font-semibold text-foreground">
                     {step.title}
@@ -110,11 +79,11 @@ export function HowItWorksSection() {
                     {step.description}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

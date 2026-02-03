@@ -98,7 +98,7 @@ export function AdminSidebar({
               <GraduationCap className="size-5 text-white" />
             </div>
             {(!isCollapsed || isMobile) && (
-              <span className="animate-fade-in font-heading text-lg font-bold text-foreground">
+              <span className="font-heading text-lg font-bold text-foreground transition-opacity duration-300">
                 ExamGen
               </span>
             )}
