@@ -95,7 +95,9 @@ async function proxyHandler(request: NextRequest, { params }: RouteParams) {
       if (
         lowerKey !== "transfer-encoding" &&
         lowerKey !== "connection" &&
-        lowerKey !== "keep-alive"
+        lowerKey !== "keep-alive" &&
+        lowerKey !== "content-encoding" &&
+        lowerKey !== "content-length"
       ) {
         response.headers.set(key, value);
       }
