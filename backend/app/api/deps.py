@@ -62,6 +62,13 @@ async def get_current_user(
             detail="Người dùng không tồn tại hoặc đã bị khóa",
         )
 
+    if user.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tài khoản đã bị vô hiệu hóa",
+        )
+
     return user
+
 
 

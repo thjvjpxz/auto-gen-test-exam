@@ -1,6 +1,8 @@
 # Makefile for Auto-Gen-Test-Exam Project
 # Usage: make <target>
 
+SHELL := /bin/bash
+
 .PHONY: help install dev build test lint docker-up docker-down clean
 
 # Default target
@@ -54,7 +56,7 @@ dev:
 
 dev-backend:
 	@echo "🔧 Starting FastAPI backend..."
-	cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 dev-frontend:
 	@echo "▲ Starting Next.js frontend..."

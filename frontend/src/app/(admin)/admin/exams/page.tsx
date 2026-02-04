@@ -3,17 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  PlusCircle,
   Filter,
   MoreHorizontal,
   Eye,
   Trash2,
   Globe,
   GlobeLock,
-  FileText,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
+  Search,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -48,6 +49,7 @@ import {
 } from "@/hooks/exam";
 import type { ExamType, ExamListParams } from "@/types";
 import { toast } from "sonner";
+import { fadeInDown, springItem } from "@/lib/motion";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -125,116 +127,126 @@ export default function ExamListPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <motion.div
+        variants={fadeInDown}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
-          <h1 className="text-3xl font-heading font-bold text-slate-900">
+          <h1 className="font-heading text-3xl font-bold text-foreground">
             Danh sách đề thi
           </h1>
-          <p className="mt-1 text-slate-600">
+          <p className="mt-1 text-muted-foreground">
             Quản lý tất cả đề thi trong hệ thống
           </p>
         </div>
         <Button
           asChild
-          className="bg-accent hover:brightness-95 text-accent-foreground cursor-pointer transition-all"
+          className="glow-effect cursor-pointer bg-accent text-accent-foreground transition-all duration-200 hover:scale-[1.02] hover:bg-accent/90"
         >
           <Link href="/admin/exams/generate">
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <Sparkles className="mr-2 size-4" />
             Sinh đề mới
           </Link>
         </Button>
-      </div>
+      </motion.div>
 
       {/* Filters */}
-      <Card className="border-slate-200">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Bộ lọc
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Select
-              value={filters.exam_type || "all"}
-              onValueChange={(value) => handleFilterChange("exam_type", value)}
-            >
-              <SelectTrigger className="w-full sm:w-48 cursor-pointer">
-                <SelectValue placeholder="Loại đề thi" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="cursor-pointer">
-                  Tất cả loại
-                </SelectItem>
-                <SelectItem value="sql_testing" className="cursor-pointer">
-                  SQL + Testing
-                </SelectItem>
-                <SelectItem value="sql_only" className="cursor-pointer">
-                  Chỉ SQL
-                </SelectItem>
-                <SelectItem value="testing_only" className="cursor-pointer">
-                  Chỉ Testing
-                </SelectItem>
-              </SelectContent>
-            </Select>
+      <motion.div variants={springItem} initial="hidden" animate="visible">
+        <Card className="overflow-hidden border-0 shadow-sm">
+          <CardHeader className="border-b bg-muted/30 pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <Filter className="size-4 text-primary" />
+              Bộ lọc
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Select
+                value={filters.exam_type || "all"}
+                onValueChange={(value) =>
+                  handleFilterChange("exam_type", value)
+                }
+              >
+                <SelectTrigger className="w-full cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary/20 sm:w-48">
+                  <SelectValue placeholder="Loại đề thi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="cursor-pointer">
+                    Tất cả loại
+                  </SelectItem>
+                  <SelectItem value="sql_testing" className="cursor-pointer">
+                    SQL + Testing
+                  </SelectItem>
+                  <SelectItem value="sql_only" className="cursor-pointer">
+                    Chỉ SQL
+                  </SelectItem>
+                  <SelectItem value="testing_only" className="cursor-pointer">
+                    Chỉ Testing
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select
-              value={
-                filters.is_published === undefined
-                  ? "all"
-                  : filters.is_published
-                    ? "true"
-                    : "false"
-              }
-              onValueChange={(value) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  skip: 0,
-                  is_published: value === "all" ? undefined : value === "true",
-                }))
-              }
-            >
-              <SelectTrigger className="w-full sm:w-48 cursor-pointer">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="cursor-pointer">
-                  Tất cả trạng thái
-                </SelectItem>
-                <SelectItem value="true" className="cursor-pointer">
-                  Đã xuất bản
-                </SelectItem>
-                <SelectItem value="false" className="cursor-pointer">
-                  Bản nháp
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+              <Select
+                value={
+                  filters.is_published === undefined
+                    ? "all"
+                    : filters.is_published
+                      ? "true"
+                      : "false"
+                }
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    skip: 0,
+                    is_published:
+                      value === "all" ? undefined : value === "true",
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary/20 sm:w-48">
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="cursor-pointer">
+                    Tất cả trạng thái
+                  </SelectItem>
+                  <SelectItem value="true" className="cursor-pointer">
+                    Đã xuất bản
+                  </SelectItem>
+                  <SelectItem value="false" className="cursor-pointer">
+                    Bản nháp
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Table */}
-      <Card className="border-slate-200">
+      <Card className="overflow-hidden border-0 shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50 hover:bg-slate-50">
-                <TableHead className="font-semibold text-slate-700">
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="font-semibold text-foreground">
                   Tiêu đề
                 </TableHead>
-                <TableHead className="font-semibold text-slate-700">
+                <TableHead className="font-semibold text-foreground">
                   Loại
                 </TableHead>
-                <TableHead className="font-semibold text-slate-700 text-center">
+                <TableHead className="text-center font-semibold text-foreground">
                   Thời gian
                 </TableHead>
-                <TableHead className="font-semibold text-slate-700 text-center">
+                <TableHead className="text-center font-semibold text-foreground">
                   Điểm đạt
                 </TableHead>
-                <TableHead className="font-semibold text-slate-700">
+                <TableHead className="font-semibold text-foreground">
                   Trạng thái
                 </TableHead>
-                <TableHead className="font-semibold text-slate-700">
+                <TableHead className="font-semibold text-foreground">
                   Ngày tạo
                 </TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -251,10 +263,10 @@ export default function ExamListPage() {
                       <Skeleton className="h-5 w-24" />
                     </TableCell>
                     <TableCell>
-                      <Skeleton className="h-5 w-16 mx-auto" />
+                      <Skeleton className="mx-auto h-5 w-16" />
                     </TableCell>
                     <TableCell>
-                      <Skeleton className="h-5 w-12 mx-auto" />
+                      <Skeleton className="mx-auto h-5 w-12" />
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-5 w-20" />
@@ -270,11 +282,24 @@ export default function ExamListPage() {
               ) : data?.items?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-48 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <FileText className="h-12 w-12 text-slate-300" />
-                      <p className="text-slate-500">Không có đề thi nào</p>
-                      <Button asChild className="mt-2 cursor-pointer">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex size-16 items-center justify-center rounded-full bg-muted">
+                        <Search className="size-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">
+                          Không có đề thi nào
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Bắt đầu bằng cách sinh đề thi đầu tiên
+                        </p>
+                      </div>
+                      <Button
+                        asChild
+                        className="mt-2 cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                      >
                         <Link href="/admin/exams/generate">
+                          <Sparkles className="mr-2 size-4" />
                           Sinh đề đầu tiên
                         </Link>
                       </Button>
@@ -282,45 +307,51 @@ export default function ExamListPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.items?.map((exam) => (
+                data?.items?.map((exam, index) => (
                   <TableRow
                     key={exam.id}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors duration-150"
+                    className="group cursor-pointer transition-colors duration-150 hover:bg-muted/50"
+                    style={{ animationDelay: `${index * 30}ms` }}
                   >
                     <TableCell>
                       <Link
                         href={`/admin/exams/${exam.id}`}
-                        className="font-medium text-slate-900 hover:text-blue-600 transition-colors"
+                        className="font-medium text-foreground transition-colors duration-200 group-hover:text-primary"
                       >
                         {exam.title}
                       </Link>
                       {exam.subject && (
-                        <p className="text-sm text-slate-500">{exam.subject}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {exam.subject}
+                        </p>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-normal">
+                      <Badge
+                        variant="outline"
+                        className="border-primary/20 font-normal"
+                      >
                         {examTypeLabels[exam.exam_type]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center text-slate-600">
+                    <TableCell className="text-center text-muted-foreground">
                       {exam.duration} phút
                     </TableCell>
-                    <TableCell className="text-center text-slate-600">
+                    <TableCell className="text-center text-muted-foreground">
                       {exam.passing_score}%
                     </TableCell>
                     <TableCell>
                       <Badge
                         className={
                           exam.is_published
-                            ? "bg-green-100 text-green-800"
-                            : "bg-slate-100 text-slate-700"
+                            ? "bg-green-100 text-green-700 hover:bg-green-100"
+                            : "bg-muted text-muted-foreground hover:bg-muted"
                         }
                       >
                         {exam.is_published ? "Đã xuất bản" : "Bản nháp"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-600">
+                    <TableCell className="text-muted-foreground">
                       {formatDate(exam.created_at)}
                     </TableCell>
                     <TableCell>
@@ -329,15 +360,15 @@ export default function ExamListPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 cursor-pointer"
+                            className="size-8 cursor-pointer opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                           >
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild className="cursor-pointer">
                             <Link href={`/admin/exams/${exam.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
+                              <Eye className="mr-2 size-4" />
                               Xem chi tiết
                             </Link>
                           </DropdownMenuItem>
@@ -347,7 +378,7 @@ export default function ExamListPage() {
                               onClick={() => handleUnpublish(exam.id)}
                               className="cursor-pointer"
                             >
-                              <GlobeLock className="mr-2 h-4 w-4" />
+                              <GlobeLock className="mr-2 size-4" />
                               Hủy xuất bản
                             </DropdownMenuItem>
                           ) : (
@@ -355,16 +386,16 @@ export default function ExamListPage() {
                               onClick={() => handlePublish(exam.id)}
                               className="cursor-pointer"
                             >
-                              <Globe className="mr-2 h-4 w-4" />
+                              <Globe className="mr-2 size-4" />
                               Xuất bản
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => handleDelete(exam.id)}
-                            className="text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50"
+                            className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 size-4" />
                             Xóa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -380,8 +411,8 @@ export default function ExamListPage() {
 
       {/* Pagination */}
       {data && totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-600">
+        <div className="flex items-center justify-between rounded-lg bg-muted/30 px-4 py-3">
+          <p className="text-sm text-muted-foreground">
             Hiển thị {(filters.skip || 0) + 1} -{" "}
             {Math.min((filters.skip || 0) + ITEMS_PER_PAGE, data.total)} trong
             tổng số {data.total} đề thi
@@ -392,11 +423,11 @@ export default function ExamListPage() {
               size="icon"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="h-8 w-8 cursor-pointer"
+              className="size-8 cursor-pointer transition-all duration-200 hover:border-primary/50"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
             </Button>
-            <span className="text-sm text-slate-600">
+            <span className="min-w-[100px] text-center text-sm font-medium text-foreground">
               Trang {currentPage} / {totalPages}
             </span>
             <Button
@@ -404,9 +435,9 @@ export default function ExamListPage() {
               size="icon"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="h-8 w-8 cursor-pointer"
+              className="size-8 cursor-pointer transition-all duration-200 hover:border-primary/50"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
         </div>

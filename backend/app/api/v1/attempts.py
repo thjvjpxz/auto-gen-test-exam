@@ -24,7 +24,7 @@ from app.schemas.attempt import (
     ViolationLogResponse,
 )
 from app.schemas.exam import ExamDataOut
-from app.schemas.grading import AttemptResultOut, GradingResult
+from app.schemas.grading import AttemptResultOut, GradingResult, SubmittedAnswers
 from app.services.grading_service import GradingService
 
 router = APIRouter(tags=["attempts"])
@@ -229,7 +229,6 @@ async def start_exam_attempt(
                 existing_attempt.percentage = 0
             
             existing_attempt.status = AttemptStatus.GRADED
-            existing_attempt.updated_at = datetime.now(timezone.utc)
             
             await db.commit()
             
@@ -342,7 +341,6 @@ async def save_attempt_answers(
                 current_answers["testing_part"][key] = value
 
     attempt.answers_json = current_answers
-    attempt.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(attempt)
@@ -445,7 +443,6 @@ async def submit_exam_attempt(
     attempt.percentage = grading_result.percentage
     attempt.ai_grading_json = grading_result.model_dump()
     attempt.status = AttemptStatus.GRADED
-    attempt.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(attempt)
@@ -468,6 +465,10 @@ async def submit_exam_attempt(
         violation_count=violation_count,
         flagged_for_review=attempt.trust_score < 50,
         grading=grading_result,
+        submitted_answers=SubmittedAnswers(
+            sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
+            testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
+        ),
     )
 
 
@@ -554,6 +555,10 @@ async def get_attempt_result(
         violation_count=violation_count,
         flagged_for_review=attempt.trust_score < 50,
         grading=grading,
+        submitted_answers=SubmittedAnswers(
+            sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
+            testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
+        ),
     )
 
 
@@ -723,7 +728,6 @@ async def log_violation(
         timestamp=request.timestamp,
         details=request.details,
     )
-    attempt.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(attempt)

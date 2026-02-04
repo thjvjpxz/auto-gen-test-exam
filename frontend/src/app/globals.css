@@ -122,6 +122,9 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans), system-ui, sans-serif;
@@ -137,5 +140,85 @@
   code,
   pre {
     font-family: var(--font-mono), monospace;
+  }
+}
+
+/* ============================================
+   UI Utility Effects
+   ============================================ */
+
+/* Hover lift effect */
+.hover-lift {
+  transition:
+    transform 0.2s ease-out,
+    box-shadow 0.2s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+}
+
+/* Icon bounce/pulse for feature cards */
+@keyframes softPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.icon-bounce {
+  transition: transform 0.2s ease-out;
+}
+
+.group:hover .icon-bounce {
+  animation: softPulse 0.3s ease-out;
+}
+
+/* Glow effect for CTA buttons */
+.glow-effect {
+  position: relative;
+}
+
+.glow-effect::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--accent), var(--primary));
+  opacity: 0;
+  filter: blur(12px);
+  transition: opacity 0.3s ease-out;
+  z-index: -1;
+}
+
+.glow-effect:hover::before {
+  opacity: 0.4;
+}
+
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .hover-lift:hover {
+    transform: none;
+  }
+
+  .glow-effect::before {
+    display: none;
   }
 }

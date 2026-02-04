@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, AlertCircle, ShieldAlert } from "lucide-react";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
 
 interface ViolationBlockingDialogProps {
@@ -31,53 +31,81 @@ export function ViolationBlockingDialog({
 
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent className="max-w-md">
-        <AlertDialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-red-100">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
+      <AlertDialogContent className="max-w-md overflow-hidden border-0 p-0 shadow-2xl">
+        {/* Top accent bar with gradient */}
+        <div className="h-1.5 bg-gradient-to-r from-red-500 via-red-600 to-orange-500" />
+
+        <div className="p-6">
+          <AlertDialogHeader className="space-y-4">
+            {/* Animated icon */}
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="flex size-14 items-center justify-center rounded-full bg-red-100">
+                  <AlertTriangle className="size-7 text-red-600" />
+                </div>
+                {/* Pulse ring */}
+                <div className="absolute inset-0 animate-ping rounded-full border-2 border-red-400 opacity-50" />
+              </div>
+              <AlertDialogTitle className="text-xl font-bold text-red-600">
+                Cảnh báo nghiêm trọng!
+              </AlertDialogTitle>
             </div>
-            <AlertDialogTitle className="text-red-600">
-              Cảnh báo nghiêm trọng!
-            </AlertDialogTitle>
-          </div>
-          <AlertDialogDescription asChild>
-            <div className="space-y-3 text-left">
-              <p>
-                Bạn đã vi phạm quy tắc thi{" "}
-                <strong>{violations.length} lần</strong>. Hệ thống đã ghi nhận
-                các hành vi sau:
-              </p>
 
-              <ul className="list-disc list-inside text-sm space-y-1 bg-red-50 p-3 rounded-lg">
-                {violations.slice(-3).map((v, i) => (
-                  <li key={i} className="text-red-700">
-                    {getViolationLabel(v.type)}
-                  </li>
-                ))}
-              </ul>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 text-left">
+                <p className="text-base text-foreground">
+                  Bạn đã vi phạm quy tắc thi{" "}
+                  <span className="font-bold text-red-600">
+                    {violations.length} lần
+                  </span>
+                  . Hệ thống đã ghi nhận các hành vi sau:
+                </p>
 
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-                <p className="text-yellow-800 font-medium">
-                  ⚠️ Còn {remainingWarnings} lần vi phạm nữa, bài thi sẽ được tự
-                  động nộp!
+                {/* Violations list with staggered animation */}
+                <ul className="space-y-2 rounded-lg bg-red-50 p-4">
+                  {violations.slice(-3).map((v, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center gap-2 text-sm text-red-700"
+                      style={{
+                        animation: `fadeInUp 0.3s ease-out ${i * 100}ms forwards`,
+                        opacity: 0,
+                      }}
+                    >
+                      <AlertCircle className="size-4 shrink-0" />
+                      <span>{getViolationLabel(v.type)}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Warning countdown with animation */}
+                <div className="flex items-start gap-3 rounded-lg border border-yellow-300 bg-gradient-to-r from-yellow-50 to-orange-50 p-4">
+                  <ShieldAlert className="mt-0.5 size-5 shrink-0 text-yellow-600" />
+                  <p className="text-sm font-medium text-yellow-800">
+                    Còn{" "}
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-yellow-200 font-bold text-yellow-900">
+                      {remainingWarnings}
+                    </span>{" "}
+                    lần vi phạm nữa, bài thi sẽ được tự động nộp!
+                  </p>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  Vui lòng tập trung làm bài và không rời khỏi trang thi.
                 </p>
               </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
-              <p className="text-muted-foreground text-sm">
-                Vui lòng tập trung làm bài và không rời khỏi trang thi.
-              </p>
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction
-            onClick={onAcknowledge}
-            className="bg-red-600 hover:bg-red-700 cursor-pointer"
-          >
-            Tôi đã hiểu, tiếp tục làm bài
-          </AlertDialogAction>
-        </AlertDialogFooter>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogAction
+              onClick={onAcknowledge}
+              className="w-full cursor-pointer bg-red-600 text-base font-medium transition-all duration-200 hover:scale-[1.01] hover:bg-red-700"
+            >
+              Tôi đã hiểu, tiếp tục làm bài
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </div>
       </AlertDialogContent>
     </AlertDialog>
   );

@@ -6,6 +6,7 @@ import type {
   ExamOut,
   ExamListResponse,
   ExamListParams,
+  ExamUpdateData,
 } from "@/types";
 
 const EXAM_API_BASE = "/v1/exams";
@@ -19,10 +20,12 @@ export const examService = {
    * Generate a new exam using AI (Admin only)
    * Returns task_id for polling status
    */
-  async generateExam(data: ExamGenerateRequest): Promise<GenerationTaskResponse> {
+  async generateExam(
+    data: ExamGenerateRequest,
+  ): Promise<GenerationTaskResponse> {
     const response = await api.post<GenerationTaskResponse>(
       `${EXAM_API_BASE}/generate`,
-      data
+      data,
     );
     return response.data;
   },
@@ -33,7 +36,7 @@ export const examService = {
    */
   async getGenerationStatus(taskId: string): Promise<GenerationStatusResponse> {
     const response = await api.get<GenerationStatusResponse>(
-      `${EXAM_API_BASE}/generation-status/${taskId}`
+      `${EXAM_API_BASE}/generation-status/${taskId}`,
     );
     return response.data;
   },
@@ -52,6 +55,18 @@ export const examService = {
    */
   async listExams(params: ExamListParams = {}): Promise<ExamListResponse> {
     const response = await api.get<ExamListResponse>(EXAM_API_BASE, { params });
+    return response.data;
+  },
+
+  /**
+   * Update exam (Admin only)
+   * Supports partial update for title, subject, duration, passing_score, is_published, settings
+   */
+  async updateExam(examId: number, data: ExamUpdateData): Promise<ExamOut> {
+    const response = await api.patch<ExamOut>(
+      `${EXAM_API_BASE}/${examId}`,
+      data,
+    );
     return response.data;
   },
 

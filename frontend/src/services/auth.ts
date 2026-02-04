@@ -1,24 +1,29 @@
 import api from "./api";
 import type {
-  TokenResponse,
   UserOut,
   RegisterRequest,
   LoginRequest,
   RegisterFormData,
 } from "@/types";
 
+interface LoginResponse {
+  user: UserOut;
+}
+
 /**
  * Authentication service for API endpoints.
+ * Works with Next.js API proxy routes for cookie-based authentication.
  */
 export const authService = {
   /**
-   * Login and receive access token with user info.
+   * Login via Next.js proxy and receive user info.
+   * Token is set as HttpOnly cookie by the proxy.
    *
    * @param data - Login credentials
-   * @returns TokenResponse with access_token and user data
+   * @returns LoginResponse with user data (token is in cookie)
    */
-  async login(data: LoginRequest): Promise<TokenResponse> {
-    const response = await api.post<TokenResponse>("/auth/login", data);
+  async login(data: LoginRequest): Promise<LoginResponse> {
+    const response = await api.post<LoginResponse>("/auth/login", data);
     return response.data;
   },
 
@@ -39,7 +44,7 @@ export const authService = {
   },
 
   /**
-   * Get current authenticated user info.
+   * Get current authenticated user info from cookie-based session.
    *
    * @returns UserOut with current user data
    */

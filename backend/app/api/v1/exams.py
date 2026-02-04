@@ -1,13 +1,13 @@
 """Exam API endpoints for generation, retrieval, and management."""
 
-from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 
 from app.api.deps import DbSessionDep, get_current_user
 from app.db.session import SessionLocal
+from app.models.attempt import AttemptStatus, ExamAttempt
 from app.models.exam import Exam, ExamType
 from app.models.user import User, UserRole
 from app.schemas.exam import (
@@ -250,8 +250,98 @@ async def list_exams(
     result = await db.execute(stmt)
     exams = result.scalars().all()
     
-    # Convert to response schema
-    items = [ExamListOut.model_validate(exam) for exam in exams]
+    exam_ids = [exam.id for exam in exams]
+    best_attempts_map: dict[int, ExamAttempt] = {}
+    recent_attempts_map: dict[int, ExamAttempt] = {}
+    
+    if exam_ids:
+        attempts_stmt = (
+            select(ExamAttempt)
+            .where(
+                and_(
+                    ExamAttempt.exam_id.in_(exam_ids),
+                    ExamAttempt.user_id == current_user.id,
+                    ExamAttempt.status.in_([AttemptStatus.SUBMITTED, AttemptStatus.GRADED]),
+                )
+            )
+            .order_by(
+                ExamAttempt.percentage.desc().nullslast(),
+                ExamAttempt.submitted_at.desc(),
+            )
+        )
+        attempts_result = await db.execute(attempts_stmt)
+        completed_attempts = attempts_result.scalars().all()
+        
+        for attempt in completed_attempts:
+            if attempt.exam_id not in best_attempts_map:
+                best_attempts_map[attempt.exam_id] = attempt
+        
+        recent_stmt = (
+            select(ExamAttempt)
+            .where(
+                and_(
+                    ExamAttempt.exam_id.in_(exam_ids),
+                    ExamAttempt.user_id == current_user.id,
+                    ExamAttempt.status.in_([AttemptStatus.SUBMITTED, AttemptStatus.GRADED]),
+                )
+            )
+            .order_by(ExamAttempt.submitted_at.desc())
+        )
+        recent_result = await db.execute(recent_stmt)
+        recent_attempts = recent_result.scalars().all()
+        
+        for attempt in recent_attempts:
+            if attempt.exam_id not in recent_attempts_map:
+                recent_attempts_map[attempt.exam_id] = attempt
+        
+        in_progress_stmt = (
+            select(ExamAttempt)
+            .where(
+                and_(
+                    ExamAttempt.exam_id.in_(exam_ids),
+                    ExamAttempt.user_id == current_user.id,
+                    ExamAttempt.status == AttemptStatus.IN_PROGRESS,
+                )
+            )
+            .order_by(ExamAttempt.started_at.desc())
+        )
+        in_progress_result = await db.execute(in_progress_stmt)
+        in_progress_attempts = in_progress_result.scalars().all()
+        
+        for attempt in in_progress_attempts:
+            if attempt.exam_id not in best_attempts_map:
+                best_attempts_map[attempt.exam_id] = attempt
+    
+    items: list[ExamListOut] = []
+    for exam in exams:
+        item_data = {
+            "id": exam.id,
+            "title": exam.title,
+            "exam_type": exam.exam_type,
+            "subject": exam.subject,
+            "created_by": exam.created_by,
+            "duration": exam.duration,
+            "passing_score": exam.passing_score,
+            "ai_generated": exam.ai_generated,
+            "is_published": exam.is_published,
+            "created_at": exam.created_at,
+        }
+        
+        best_attempt = best_attempts_map.get(exam.id)
+        recent_attempt = recent_attempts_map.get(exam.id)
+        
+        if best_attempt:
+            item_data["last_attempt_id"] = best_attempt.id
+            item_data["last_attempt_status"] = best_attempt.status.value
+            if best_attempt.status in (AttemptStatus.SUBMITTED, AttemptStatus.GRADED):
+                item_data["last_attempt_score"] = best_attempt.percentage
+                item_data["last_attempt_at"] = best_attempt.submitted_at
+        
+        if recent_attempt and best_attempt and recent_attempt.id != best_attempt.id:
+            item_data["recent_attempt_score"] = recent_attempt.percentage
+            item_data["recent_attempt_at"] = recent_attempt.submitted_at
+        
+        items.append(ExamListOut(**item_data))
     
     return ExamListResponse(
         items=items,
@@ -321,9 +411,18 @@ async def update_exam(
         exam.is_published = request.is_published
         has_changes = True
     
-    # Update updated_at timestamp if there were changes
+    if request.settings is not None:
+        current_settings = exam.settings_json or {}
+        settings_update = request.settings.model_dump(exclude_none=True)
+        
+        if request.settings.max_attempts is None and "max_attempts" not in settings_update:
+            pass
+        
+        current_settings.update(settings_update)
+        exam.settings_json = current_settings
+        has_changes = True
+    
     if has_changes:
-        exam.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(exam)
     

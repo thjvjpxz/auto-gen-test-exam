@@ -124,6 +124,31 @@ class ExamListOut(BaseModel):
     is_published: bool
     created_at: datetime
 
+    last_attempt_status: str | None = Field(
+        default=None,
+        description="User's best attempt status (in_progress if no completed, otherwise graded/submitted)",
+    )
+    last_attempt_score: float | None = Field(
+        default=None,
+        description="User's BEST score from all completed attempts (percentage, highest wins)",
+    )
+    last_attempt_id: int | None = Field(
+        default=None,
+        description="ID of the user's best attempt (highest score)",
+    )
+    last_attempt_at: datetime | None = Field(
+        default=None,
+        description="Timestamp of the user's best attempt submission",
+    )
+    recent_attempt_score: float | None = Field(
+        default=None,
+        description="Score of user's most recent attempt (only if different from best)",
+    )
+    recent_attempt_at: datetime | None = Field(
+        default=None,
+        description="Timestamp of user's most recent attempt (only if different from best)",
+    )
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -153,6 +178,28 @@ class ExamListResponse(BaseModel):
     limit: int
 
 
+class ExamSettingsUpdate(BaseModel):
+    """Schema for updating exam settings (partial update).
+    
+    All fields are optional to support partial update.
+    """
+    
+    allow_review: bool | None = Field(
+        default=None,
+        description="Cho phép xem lại kết quả sau khi nộp bài",
+    )
+    show_sample_solution: bool | None = Field(
+        default=None,
+        description="Hiển thị đáp án mẫu sau khi nộp bài",
+    )
+    max_attempts: int | None = Field(
+        default=None,
+        ge=1,
+        le=100,
+        description="Số lần làm bài tối đa (1-100, null = không giới hạn)",
+    )
+
+
 class ExamUpdateRequest(BaseModel):
     """Request schema for updating an exam (partial update).
     
@@ -165,6 +212,7 @@ class ExamUpdateRequest(BaseModel):
             "example": {
                 "is_published": True,
                 "title": "Đề thi SQL và Testing cơ bản",
+                "settings": {"allow_review": True, "max_attempts": 3},
             }
         }
     )
@@ -196,3 +244,8 @@ class ExamUpdateRequest(BaseModel):
         default=None,
         description="Trạng thái xuất bản (true = đã xuất bản, false = chưa xuất bản)",
     )
+    settings: ExamSettingsUpdate | None = Field(
+        default=None,
+        description="Cài đặt đề thi (partial update)",
+    )
+

@@ -54,8 +54,8 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
                │
         ┌──────┼──────────┐
         │      │          │
-      REST    REST    WebSocket
-       API     API    (Real-time)
+      REST    REST      REST
+       API     API       API
         │      │          │
 ┌───────▼──────▼──────────▼────────────┐
 │   Backend: FastAPI (Python)          │
@@ -65,8 +65,8 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 │  - AI generation (Gemini)             │
 │  - Auto grading logic                 │
 │  - Anti-cheating logic                │
-│  - WebSocket server (Socket.io)       │
-│  - Background tasks (Celery)          │
+│  - REST API services                │
+│  - Background tasks (asyncio)        │
 └──────────────┬───────────────────────┘
                │
     ┌──────────┼──────────┐
@@ -84,7 +84,7 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 
 1. **Đồng bộ (Synchronous):** Next.js UI → FastAPI REST API → SQLAlchemy → SQLite
 2. **Bất đồng bộ (Async):** FastAPI → Background task (asyncio) → Gemini AI → Database
-3. **Real-time:** Next.js Client ↔ FastAPI WebSocket Server (timer, violations)
+3. **Monitoring:** Next.js Client → FastAPI REST API (timer sync, violations)
 
 ### Nguyên Tắc Phân Chia
 
@@ -104,7 +104,7 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 - ✅ ALL database operations (CRUD)
 - ✅ ALL business logic (grading, scoring, trust score)
 - ✅ ALL AI integration (Gemini API calls)
-- ✅ WebSocket server (broadcast timer, violations)
+- ✅ Monitoring logic (logging violations, trust score)
 - ✅ Background tasks (asyncio - đơn giản, không cần Celery)
 
 ---
@@ -147,10 +147,10 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 
 #### Real-time & State Management
 
-| Technology           | Version | Lý do chọn                                                                                          |
-| -------------------- | ------- | --------------------------------------------------------------------------------------------------- |
-| **socket.io-client** | 4.6.1   | - WebSocket client kết nối FastAPI<br>- Timer sync, violations alerts<br>- Auto reconnect           |
-| **Zustand**          | 4.5.0   | - Client state (exam progress, timer)<br>- Lightweight, no boilerplate<br>- Persist to localStorage |
+| Technology  | Version | Lý do chọn                                                                                          |
+| ----------- | ------- | --------------------------------------------------------------------------------------------------- |
+| **axios**   | 1.6.0   | - Dùng cho tất cả API calls bao gồm logging violations và state sync                                |
+| **Zustand** | 4.5.0   | - Client state (exam progress, timer)<br>- Lightweight, no boilerplate<br>- Persist to localStorage |
 
 ---
 
@@ -187,12 +187,9 @@ Chuyển từ Telegram Bot → **Web App đầy đủ** với:
 | **passlib[bcrypt]**  | 1.7.4   | Password hashing secure |
 | **python-multipart** | 0.0.6   | Form data parsing       |
 
-#### WebSocket & Real-time
+#### Real-time Simulation
 
-| Technology            | Version | Lý do chọn                                                              |
-| --------------------- | ------- | ----------------------------------------------------------------------- |
-| **python-socketio**   | 5.10.0  | - WebSocket server cho FastAPI<br>- Room support<br>- Namespace support |
-| **uvicorn[standard]** | 0.27.0  | WebSocket support                                                       |
+Hệ thống sử dụng REST API kết hợp với Frontend state management (Zustand) để giả lập các tính năng thời gian thực (timer, monitoring).
 
 #### CORS & Middleware
 
@@ -514,18 +511,15 @@ GET    /api/exams/{id}/analytics   # Analytics data (admin only)
 GET    /api/exams/{id}/export      # Export CSV/PDF (admin only)
 ```
 
-### WebSocket Events
+### Monitoring & Sync (REST)
 
 ```
 Client → Server:
-  - join_exam(exam_id, student_id)
-  - heartbeat(timestamp)
-  - violation(type, details)
+  - POST /api/v1/attempts/{id}/log-violation  # Log vi phạm
+  - PATCH /api/v1/attempts/{id}/save          # Sync đáp án & trạng thái
 
 Server → Client:
-  - timer_update(remaining_seconds)
-  - violation_warning(message, severity)
-  - force_submit(reason)
+  - Return updated trust_score & warning_level
 ```
 
 ---
@@ -670,30 +664,17 @@ Output JSON:
 
 ---
 
-## ⏱️ Real-time Features
+### Monitoring Features (REST-based)
 
-### WebSocket Implementation
+#### 1. Exam Timer Sync
 
-#### Use Cases
+- Timer chạy ở Client qua `use-exam-timer.ts`.
+- Khi Refresh trang, Client fetch lại `started_at` từ DB để tính toán lại thời gian còn lại.
 
-1. **Exam Timer Sync**
-2. **Tab Switch Detection Alerts**
-3. **Live Violation Monitoring**
+#### 2. Violation Logging
 
-#### Socket.io Events
-
-**Client → Server:**
-
-- `join_exam` - Join exam room với examId, studentId
-- `ping` - Heartbeat mỗi 5s
-- `violation` - Log vi phạm (type, timestamp)
-- `answer_submitted` - Thông báo đã save answer
-
-**Server → Client:**
-
-- `timer_update` - Cập nhật thời gian còn lại
-- `violation_warning` - Cảnh báo vi phạm (message, severity: low/high)
-- `force_submit` - Bắt buộc nộp bài (reason)
+- Mỗi khi phát hiện vi phạm, Client gọi API để lưu vào DB.
+- Backend tính toán Trust Score và trả về Client ngay lời giải đáp (Response).
 
 ---
 
@@ -709,7 +690,7 @@ Output JSON:
 
 - Detect khi user chuyển tab/window
 - Increment switch count
-- Log violation → WebSocket → Backend
+- Log violation → REST API → Backend
 - Thresholds:
   - 1-2 lần: Warning toast
   - 3-4 lần: Serious warning dialog
@@ -1142,7 +1123,7 @@ Output JSON:
 **Environment Variables:**
 
 - `NEXT_PUBLIC_API_URL`: FastAPI backend URL
-- `NEXT_PUBLIC_WS_URL`: WebSocket server URL
+- `NEXT_PUBLIC_API_URL`: FastAPI backend URL (Vercel automatic proxy)
 
 **Regions:**
 
@@ -1222,7 +1203,7 @@ Output JSON:
 - ✅ API Response Time (p95): < 200ms
 - ✅ AI Generation: < 30s (async)
 - ✅ Database Query: < 50ms
-- ✅ WebSocket Latency: < 100ms
+- ✅ API Response Latency: < 200ms
 
 ### Scalability
 
@@ -1295,7 +1276,7 @@ Output JSON:
 
 - Database operations (SQLAlchemy)
 - AI API mocking (Gemini responses)
-- WebSocket events
+- REST API integration
 - Celery tasks
 
 ### Coverage Target
@@ -1335,7 +1316,7 @@ Output JSON:
 - Error rate (4xx, 5xx)
 - Database connection pool usage
 - Redis cache hit rate
-- Celery queue length & task duration
+- Background task duration (asyncio)
 
 ---
 
@@ -1379,7 +1360,7 @@ Output JSON:
 - [FastAPI Docs](https://fastapi.tiangolo.com)
 - [SQLAlchemy Docs](https://docs.sqlalchemy.org)
 - [Google Gemini API](https://ai.google.dev/docs)
-- [Socket.io](https://socket.io/docs)
+- [Zustand Docs](https://github.com/pmndrs/zustand)
 
 ### Tools
 
@@ -1430,7 +1411,7 @@ Output JSON:
 **Backend (FastAPI):**
 
 - REST API endpoints (auth, CRUD exams/attempts)
-- WebSocket server (timer, violations)
+- Monitoring endpoints (log violations, state sync)
 - AI grading endpoint (NEW - chấm điểm SQL/Testing)
 - SQLAlchemy models & migrations (SQLite)
 - Background tasks (asyncio thay Celery)

@@ -1,10 +1,18 @@
 "use client";
 
-import { Timer, Send, AlertTriangle } from "lucide-react";
+import {
+  Timer,
+  Send,
+  AlertTriangle,
+  Loader2,
+  GraduationCap,
+} from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SaveIndicator } from "./save-indicator";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
+import { fadeInDown, fadeInScale } from "@/lib/motion";
 
 interface ExamHeaderProps {
   examTitle: string;
@@ -29,56 +37,75 @@ export function ExamHeader({
   const warningLevel = useExamAttemptStore((s) => s.warningLevel);
 
   const timerClasses = cn(
-    "flex items-center gap-2 px-3 py-1.5 rounded-md font-mono text-lg font-semibold transition-colors duration-300",
+    "flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-lg font-semibold transition-all duration-300",
     {
-      "bg-slate-100 text-slate-800": !isLowTime && !isUrgent,
-      "bg-yellow-100 text-yellow-800": isLowTime && !isUrgent,
-      "bg-red-100 text-red-800 animate-pulse": isUrgent,
+      "bg-muted text-foreground": !isLowTime && !isUrgent,
+      "bg-yellow-100 text-yellow-800 shadow-sm": isLowTime && !isUrgent,
+      "bg-red-100 text-red-800 shadow-md animate-pulse": isUrgent,
     },
   );
 
   const hasWarning = warningLevel !== "none";
 
   return (
-    <header className="sticky top-0 z-50 bg-background border-b border-border shadow-sm">
-      <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        {/* Left: Logo + Title */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
-            <span className="text-primary-foreground font-bold text-sm">E</span>
+    <motion.header
+      variants={fadeInDown}
+      initial="hidden"
+      animate="visible"
+      className="sticky top-0 z-50 border-b border-border bg-background/95 shadow-sm backdrop-blur-sm"
+    >
+      <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary shadow-sm transition-transform duration-200 hover:scale-105">
+            <GraduationCap className="size-5 text-primary-foreground" />
           </div>
-          <h1 className="font-semibold text-foreground truncate max-w-[200px] sm:max-w-none">
-            {examTitle}
-          </h1>
+          <div className="min-w-0">
+            <h1 className="max-w-[200px] truncate font-semibold text-foreground sm:max-w-none">
+              {examTitle}
+            </h1>
+          </div>
           {hasWarning && (
-            <div className="flex items-center gap-1 text-yellow-600">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-xs hidden sm:inline">Cảnh báo</span>
-            </div>
+            <motion.div
+              variants={fadeInScale}
+              initial="hidden"
+              animate="visible"
+              className="flex items-center gap-1.5 rounded-full bg-yellow-100 px-2.5 py-1 text-yellow-700"
+            >
+              <AlertTriangle className="size-3.5" />
+              <span className="hidden text-xs font-medium sm:inline">
+                Cảnh báo
+              </span>
+            </motion.div>
           )}
         </div>
 
-        {/* Center: Timer */}
         <div className={timerClasses}>
-          <Timer className="h-5 w-5" />
-          <span>{formattedTime}</span>
+          <Timer className={cn("size-5", isUrgent && "animate-pulse")} />
+          <span className="tabular-nums">{formattedTime}</span>
         </div>
 
-        {/* Right: Save indicator + Submit */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <SaveIndicator />
           <Button
             onClick={onSubmit}
             disabled={isSubmitting}
-            className="bg-accent hover:brightness-95 text-accent-foreground cursor-pointer transition-all"
+            className="glow-effect cursor-pointer bg-accent text-accent-foreground transition-all duration-200 hover:scale-[1.02] hover:bg-accent/90"
+            size="lg"
           >
-            <Send className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">
-              {isSubmitting ? "Đang nộp..." : "Nộp bài"}
-            </span>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                <span className="hidden sm:inline">Đang nộp...</span>
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 size-4" />
+                <span className="hidden sm:inline">Nộp bài</span>
+              </>
+            )}
           </Button>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

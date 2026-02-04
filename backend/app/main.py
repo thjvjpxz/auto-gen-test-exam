@@ -4,8 +4,12 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy import select
 
+from app.api.v1.admin import router as admin_router
 from app.api.v1.attempts import router as attempts_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.exams import router as exams_router
@@ -18,7 +22,7 @@ from app.models.user import User, UserRole
 
 
 async def seed_admin_user() -> None:
-    """Tạo admin user mặc định, xóa và tạo lại nếu đã tồn tại."""
+    """Tạo hoặc update admin user mặc định, giữ nguyên data liên quan."""
     settings = get_settings()
 
     async with SessionLocal() as session:
@@ -27,16 +31,19 @@ async def seed_admin_user() -> None:
         existing_admin = result.scalar_one_or_none()
 
         if existing_admin is not None:
-            await session.delete(existing_admin)
-            await session.commit()
+            existing_admin.password_hash = hash_password(settings.admin_password)
+            existing_admin.name = settings.admin_name
+            existing_admin.role = UserRole.ADMIN
+            existing_admin.is_deleted = False
+        else:
+            admin = User(
+                email=settings.admin_email,
+                name=settings.admin_name,
+                password_hash=hash_password(settings.admin_password),
+                role=UserRole.ADMIN,
+            )
+            session.add(admin)
 
-        admin = User(
-            email=settings.admin_email,
-            name=settings.admin_name,
-            password_hash=hash_password(settings.admin_password),
-            role=UserRole.ADMIN,
-        )
-        session.add(admin)
         await session.commit()
 
 
@@ -54,11 +61,22 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
 
+    limiter = Limiter(key_func=get_remote_address)
+    
     app = FastAPI(
         title=settings.app_name,
         debug=settings.debug,
         lifespan=lifespan,
     )
+    
+    app.state.limiter = limiter
+
+    @app.exception_handler(RateLimitExceeded)
+    async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau."},
+        )
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -97,6 +115,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix="/api")
     app.include_router(exams_router, prefix="/api")
     app.include_router(attempts_router, prefix="/api/v1")
+    app.include_router(admin_router, prefix="/api")
 
     return app
 

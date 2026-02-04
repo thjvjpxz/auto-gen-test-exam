@@ -2,7 +2,14 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { AlertTriangle, Maximize } from "lucide-react";
+import {
+  AlertTriangle,
+  Maximize,
+  Loader2,
+  ArrowLeft,
+  Shield,
+} from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExamHeader } from "@/components/exam/exam-header";
@@ -19,6 +26,13 @@ import { useViolationMonitor } from "@/hooks/use-violation-monitor";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
 import { useAuthStore } from "@/stores/auth";
 import { toast } from "sonner";
+import Link from "next/link";
+import {
+  springItem,
+  fadeInScale,
+  fadeInDown,
+  floatAnimation,
+} from "@/lib/motion";
 
 /**
  * Main exam taking page with proctoring and auto-save.
@@ -146,7 +160,6 @@ export default function ExamTakePage() {
     if (attemptId) {
       const recovered = recoverFromLocal();
       if (recovered) {
-        // Could show a dialog asking if user wants to restore
         console.log("Recovered draft available");
       }
     }
@@ -196,7 +209,6 @@ export default function ExamTakePage() {
     }
 
     // Show blocking dialog for high warning (3-4 violations)
-    // Using a timeout to defer state update and avoid cascading renders
     if (warningLevel === "high" && !acknowledgedHighWarning) {
       const timerId = setTimeout(() => setShowBlockingDialog(true), 0);
       return () => clearTimeout(timerId);
@@ -282,11 +294,28 @@ export default function ExamTakePage() {
   // Loading state
   if (authLoading || startExam.isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Đang tải bài thi...</p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <motion.div
+          variants={springItem}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6 text-center"
+        >
+          {/* Animated loading spinner */}
+          <div className="relative mx-auto size-20">
+            <div className="absolute inset-0 animate-ping rounded-full border-4 border-primary/30" />
+            <div className="absolute inset-2 rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+            <Loader2 className="absolute inset-0 m-auto size-8 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-lg font-medium text-foreground">
+              Đang tải bài thi...
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Vui lòng chờ trong giây lát
+            </p>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -294,24 +323,33 @@ export default function ExamTakePage() {
   // Error state
   if (startExam.isError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-md w-full mx-4">
-          <CardContent className="pt-6 text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">
-              Không thể bắt đầu bài thi
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              {startExam.error?.message || "Đã có lỗi xảy ra"}
-            </p>
-            <Button
-              onClick={() => router.push("/exams")}
-              className="cursor-pointer"
-            >
-              Quay lại danh sách
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <motion.div variants={fadeInScale} initial="hidden" animate="visible">
+          <Card className="w-full max-w-md overflow-hidden border-2">
+            <div className="h-1 bg-gradient-to-r from-destructive via-destructive/60 to-transparent" />
+            <CardContent className="pt-8 text-center">
+              <motion.div
+                variants={floatAnimation}
+                animate="animate"
+                className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10"
+              >
+                <AlertTriangle className="size-8 text-destructive" />
+              </motion.div>
+              <h2 className="mb-2 text-xl font-semibold">
+                Không thể bắt đầu bài thi
+              </h2>
+              <p className="mb-6 text-muted-foreground">
+                {startExam.error?.message || "Đã có lỗi xảy ra"}
+              </p>
+              <Link href="/exams">
+                <Button className="glow-effect cursor-pointer transition-all duration-200 hover:scale-[1.02]">
+                  <ArrowLeft className="mr-2 size-4" />
+                  Quay lại danh sách
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
@@ -319,32 +357,51 @@ export default function ExamTakePage() {
   // Fullscreen prompt
   if (showFullscreenPrompt && isSupported && attemptId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-md w-full mx-4">
-          <CardContent className="pt-6 text-center space-y-4">
-            <Maximize className="h-12 w-12 text-primary mx-auto" />
-            <h2 className="text-xl font-semibold">Chế độ toàn màn hình</h2>
-            <p className="text-muted-foreground">
-              Để đảm bảo tính công bằng, bài thi sẽ được thực hiện ở chế độ toàn
-              màn hình. Việc thoát khỏi chế độ này sẽ được ghi lại.
-            </p>
-            <div className="flex gap-3 justify-center">
-              <Button
-                variant="outline"
-                onClick={handleSkipFullscreen}
-                className="cursor-pointer"
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <motion.div variants={fadeInScale} initial="hidden" animate="visible">
+          <Card className="w-full max-w-md overflow-hidden border-2">
+            <div className="h-1 bg-gradient-to-r from-primary via-primary/60 to-accent" />
+            <CardContent className="space-y-6 pt-8 text-center">
+              <motion.div
+                variants={floatAnimation}
+                animate="animate"
+                className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary/10"
               >
-                Bỏ qua
-              </Button>
-              <Button
-                onClick={handleEnterFullscreen}
-                className="cursor-pointer"
-              >
-                Bật toàn màn hình
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                <Maximize className="size-8 text-primary" />
+              </motion.div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Chế độ toàn màn hình</h2>
+                <p className="text-muted-foreground">
+                  Để đảm bảo tính công bằng, bài thi sẽ được thực hiện ở chế độ
+                  toàn màn hình. Việc thoát khỏi chế độ này sẽ được ghi lại.
+                </p>
+              </div>
+
+              {/* Security note */}
+              <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+                <Shield className="size-4 shrink-0" />
+                <span>Bài thi được bảo vệ bởi hệ thống giám sát tự động</span>
+              </div>
+
+              <div className="flex gap-3 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={handleSkipFullscreen}
+                  className="cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                >
+                  Bỏ qua
+                </Button>
+                <Button
+                  onClick={handleEnterFullscreen}
+                  className="glow-effect cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                >
+                  <Maximize className="mr-2 size-4" />
+                  Bật toàn màn hình
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
@@ -364,13 +421,25 @@ export default function ExamTakePage() {
         isSubmitting={submitExam.isPending}
       />
 
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
-        {/* Violation Warning */}
+      <main className="container mx-auto max-w-4xl px-4 py-6">
+        {/* Violation Warning with animation */}
         {warningLevel !== "none" && !dismissedWarning && (
-          <ViolationWarning onDismiss={() => setDismissedWarning(true)} />
+          <motion.div
+            variants={fadeInDown}
+            initial="hidden"
+            animate="visible"
+            className="mb-6"
+          >
+            <ViolationWarning onDismiss={() => setDismissedWarning(true)} />
+          </motion.div>
         )}
 
-        <div className="space-y-6">
+        <motion.div
+          variants={springItem}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6"
+        >
           {/* SQL Part */}
           {examData.sql_part && <SqlPartForm sqlPart={examData.sql_part} />}
 
@@ -378,7 +447,7 @@ export default function ExamTakePage() {
           {examData.testing_part && (
             <TestingPartForm testingPart={examData.testing_part} />
           )}
-        </div>
+        </motion.div>
       </main>
 
       {/* Submit Confirmation */}

@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  FlaskConical,
+  FileText,
+  ListChecks,
+  Lightbulb,
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,23 +96,29 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
   if (!testingPart) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2">
-          <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+    <Card className="overflow-hidden border-2 transition-shadow duration-300 hover:shadow-md">
+      {/* Top accent */}
+      <div className="h-1 bg-gradient-to-r from-accent via-accent/60 to-transparent" />
+
+      <CardHeader className="border-b bg-muted/30">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground shadow-sm">
             2
-          </span>
-          Phần Testing
+          </div>
+          <span>Phần Testing</span>
+          <FlaskConical className="size-5 text-muted-foreground" />
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+
+      <CardContent className="space-y-6 pt-6">
         {/* Scenario */}
         {testingPart.scenario && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-800 mb-2">
+          <div className="overflow-hidden rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-800">
+              <FileText className="size-4" />
               Tình huống
             </h3>
-            <p className="text-sm text-blue-700 whitespace-pre-wrap">
+            <p className="whitespace-pre-wrap text-sm text-blue-700">
               {testingPart.scenario}
             </p>
           </div>
@@ -113,11 +126,17 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
 
         {/* Requirements */}
         {testingPart.requirements && testingPart.requirements.length > 0 && (
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Yêu cầu</h3>
-            <ul className="list-disc list-inside space-y-1 text-sm text-slate-600">
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-gray-50 p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <ListChecks className="size-4" />
+              Yêu cầu
+            </h3>
+            <ul className="space-y-2 text-sm text-slate-600">
               {testingPart.requirements.map((req, index) => (
-                <li key={index}>{req}</li>
+                <li key={index} className="flex items-start gap-2">
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-slate-400" />
+                  <span>{req}</span>
+                </li>
               ))}
             </ul>
           </div>
@@ -125,23 +144,36 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
 
         {/* Question */}
         {testingPart.question && (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <h3 className="text-sm font-medium text-amber-800 mb-2">Câu hỏi</h3>
+          <div className="overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-800">
+              <Lightbulb className="size-4" />
+              Câu hỏi
+            </h3>
             <p className="text-sm text-amber-700">{testingPart.question}</p>
-            <p className="text-xs text-amber-600 mt-2">
-              Điểm tối đa: {testingPart.max_points ?? 50}
-            </p>
+            <div className="mt-3">
+              <span className="rounded-full bg-amber-200/50 px-2.5 py-1 text-xs font-medium text-amber-800">
+                Điểm tối đa: {testingPart.max_points ?? 50}
+              </span>
+            </div>
           </div>
         )}
 
         {/* Technique Selection */}
-        <div className="space-y-2">
-          <Label htmlFor="technique">Chọn kỹ thuật kiểm thử</Label>
+        <div className="space-y-3">
+          <Label
+            htmlFor="technique"
+            className="flex items-center gap-2 text-base font-medium"
+          >
+            Chọn kỹ thuật kiểm thử
+          </Label>
           <Select
             value={testingAnswers.technique ?? ""}
             onValueChange={handleTechniqueChange}
           >
-            <SelectTrigger id="technique" className="w-full cursor-pointer">
+            <SelectTrigger
+              id="technique"
+              className="w-full cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+            >
               <SelectValue placeholder="Chọn kỹ thuật..." />
             </SelectTrigger>
             <SelectContent>
@@ -159,8 +191,10 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
         </div>
 
         {/* Explanation */}
-        <div className="space-y-2">
-          <Label htmlFor="explanation">Giải thích lý do chọn kỹ thuật</Label>
+        <div className="space-y-3">
+          <Label htmlFor="explanation" className="text-base font-medium">
+            Giải thích lý do chọn kỹ thuật
+          </Label>
           <Textarea
             id="explanation"
             value={testingAnswers.explanation ?? ""}
@@ -168,15 +202,18 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
               handleExplanationChange(e.target.value)
             }
             placeholder="Giải thích tại sao bạn chọn kỹ thuật này..."
-            className="min-h-[100px] resize-y"
+            className="min-h-[100px] resize-y transition-all duration-200 focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
         {/* Test Cases */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label>
-              Test Cases ({testCases.length}/{MAX_TEST_CASES})
+            <Label className="flex items-center gap-2 text-base font-medium">
+              Test Cases
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                {testCases.length}/{MAX_TEST_CASES}
+              </span>
             </Label>
             <Button
               type="button"
@@ -184,16 +221,19 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
               size="sm"
               onClick={handleAddTestCase}
               disabled={testCases.length >= MAX_TEST_CASES}
-              className="cursor-pointer"
+              className="cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:border-primary/50"
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="mr-1 size-4" />
               Thêm test case
             </Button>
           </div>
 
           {testCases.length === 0 ? (
-            <div className="text-center py-8 border-2 border-dashed rounded-lg">
-              <p className="text-muted-foreground text-sm">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed py-8 text-center transition-colors duration-200 hover:border-primary/30 hover:bg-muted/30">
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                <Plus className="size-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">
                 Chưa có test case nào. Click &quot;Thêm test case&quot; để bắt
                 đầu.
               </p>
@@ -203,24 +243,30 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
               {testCases.map((testCase, index) => (
                 <div
                   key={index}
-                  className="p-4 border rounded-lg bg-slate-50 space-y-3"
+                  className="group overflow-hidden rounded-lg border bg-muted/30 p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-sm"
+                  style={{
+                    animationDelay: `${index * 50}ms`,
+                  }}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700">
-                      Test Case #{index + 1}
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold">
+                        {index + 1}
+                      </span>
+                      Test Case
                     </span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveTestCase(index)}
-                      className="text-destructive hover:bg-destructive/10 cursor-pointer h-8 w-8 p-0 transition-colors"
+                      className="size-8 cursor-pointer p-0 text-destructive opacity-0 transition-all duration-200 hover:bg-destructive/10 group-hover:opacity-100"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
                       <Label
                         htmlFor={`input-${index}`}
                         className="text-xs text-muted-foreground"
@@ -234,9 +280,10 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                           handleTestCaseChange(index, "input", e.target.value)
                         }
                         placeholder="Giá trị đầu vào..."
+                        className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <Label
                         htmlFor={`output-${index}`}
                         className="text-xs text-muted-foreground"
@@ -254,6 +301,7 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                           )
                         }
                         placeholder="Kết quả mong đợi..."
+                        className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
                   </div>

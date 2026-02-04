@@ -1,14 +1,21 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import { Mail } from "lucide-react";
-import { Lock } from "lucide-react";
-import { User } from "lucide-react";
-import { GraduationCap } from "lucide-react";
+import {
+  Loader2,
+  Mail,
+  Lock,
+  User,
+  GraduationCap,
+  ArrowLeft,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +43,12 @@ import {
   setFormValidationErrors,
 } from "@/lib/errors";
 import { env } from "@/config/env";
+import {
+  staggerContainer,
+  springItem,
+  fadeInDown,
+  fadeInScale,
+} from "@/lib/motion";
 
 const FORM_DEFAULT_VALUES: RegisterFormData = {
   name: "",
@@ -44,7 +57,15 @@ const FORM_DEFAULT_VALUES: RegisterFormData = {
   confirmPassword: "",
 };
 
+const BENEFITS = [
+  "Truy cập ngân hàng đề thi đa dạng",
+  "Nhận kết quả và phân tích chi tiết",
+  "Theo dõi tiến độ học tập",
+];
+
 export default function RegisterPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const registerMutation = useRegister();
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -77,163 +98,249 @@ export default function RegisterPage() {
   const isPending = registerMutation.isPending;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4 py-8">
-      <div className="w-full max-w-md">
-        <Card className="border-2 shadow-lg">
-          <CardHeader className="space-y-1 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="rounded-full bg-primary/10 p-3">
-                <GraduationCap className="h-8 w-8 text-primary" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl font-bold">
-              Tạo tài khoản mới
-            </CardTitle>
-            <CardDescription>
-              Điền thông tin để đăng ký tài khoản
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 p-4 py-8">
+      <div className="pointer-events-none absolute -right-32 -top-32 size-96 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-32 size-96 rounded-full bg-accent/10 blur-3xl" />
+
+      <motion.div variants={fadeInDown} initial="hidden" animate="visible">
+        <Link
+          href="/"
+          className="group absolute left-4 top-4 flex items-center gap-2 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+        >
+          <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
+          Về trang chủ
+        </Link>
+      </motion.div>
+
+      <motion.div
+        className="w-full max-w-md"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={springItem}>
+          <Card className="relative overflow-hidden border-2 shadow-lg transition-shadow duration-300 hover:shadow-xl">
+            <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-accent via-primary/80 to-primary" />
+
+            <CardHeader className="space-y-1 pt-8 text-center">
+              <motion.div
+                variants={fadeInScale}
+                className="mb-4 flex justify-center"
               >
-                {errorMessage ? (
-                  <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-                    {errorMessage}
-                  </div>
-                ) : null}
+                <div className="group rounded-full bg-accent/10 p-3 transition-all duration-300 hover:scale-105 hover:bg-accent/20">
+                  <GraduationCap className="size-8 text-accent transition-transform duration-300 group-hover:rotate-12" />
+                </div>
+              </motion.div>
+              <CardTitle className="text-2xl font-bold">
+                Tạo tài khoản mới
+              </CardTitle>
+              <CardDescription>
+                Điền thông tin để đăng ký tài khoản
+              </CardDescription>
+            </CardHeader>
 
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Họ và tên</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="text"
-                            placeholder="Nguyễn Văn A"
-                            className="pl-9"
-                            disabled={isPending}
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="email"
-                            placeholder="name@example.com"
-                            className="pl-9"
-                            disabled={isPending}
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mật khẩu</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="password"
-                            placeholder="••••••••"
-                            className="pl-9"
-                            disabled={isPending}
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        Tối thiểu 8 ký tự, bao gồm cả chữ và số
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Xác nhận mật khẩu</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="password"
-                            placeholder="••••••••"
-                            className="pl-9"
-                            disabled={isPending}
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isPending}
-                  size="lg"
+            <CardContent>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
                 >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    "Đăng ký"
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-center text-muted-foreground">
-              Đã có tài khoản?{" "}
-              <Link
-                href="/login"
-                className="font-medium text-primary hover:underline transition-colors cursor-pointer"
-              >
-                Đăng nhập ngay
-              </Link>
-            </div>
-            <div className="text-xs text-center text-muted-foreground">
-              {env.APP_NAME}
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
+                  {errorMessage ? (
+                    <motion.div
+                      variants={fadeInScale}
+                      initial="hidden"
+                      animate="visible"
+                      className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+                      role="alert"
+                    >
+                      {errorMessage}
+                    </motion.div>
+                  ) : null}
+
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Họ và tên</FormLabel>
+                        <div className="group relative">
+                          <User className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder="Nguyễn Văn A"
+                              className="pl-9 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                              disabled={isPending}
+                              autoFocus
+                              {...field}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Email</FormLabel>
+                        <div className="group relative">
+                          <Mail className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="name@example.com"
+                              className="pl-9 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                              disabled={isPending}
+                              {...field}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Mật khẩu</FormLabel>
+                        <div className="group relative">
+                          <Lock className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                          <FormControl>
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              className="pl-9 pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                              disabled={isPending}
+                              {...field}
+                            />
+                          </FormControl>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 cursor-pointer text-muted-foreground transition-all duration-200 hover:scale-110 hover:text-foreground"
+                            tabIndex={-1}
+                            aria-label={
+                              showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                            }
+                          >
+                            {showPassword ? (
+                              <EyeOff className="size-4" />
+                            ) : (
+                              <Eye className="size-4" />
+                            )}
+                          </button>
+                        </div>
+                        <FormDescription className="text-xs">
+                          Tối thiểu 8 ký tự, bao gồm cả chữ và số
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Xác nhận mật khẩu</FormLabel>
+                        <div className="group relative">
+                          <Lock className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                          <FormControl>
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="••••••••"
+                              className="pl-9 pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                              disabled={isPending}
+                              {...field}
+                            />
+                          </FormControl>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 cursor-pointer text-muted-foreground transition-all duration-200 hover:scale-110 hover:text-foreground"
+                            tabIndex={-1}
+                            aria-label={
+                              showConfirmPassword
+                                ? "Ẩn mật khẩu"
+                                : "Hiện mật khẩu"
+                            }
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="size-4" />
+                            ) : (
+                              <Eye className="size-4" />
+                            )}
+                          </button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    className="glow-effect w-full bg-accent text-accent-foreground transition-all duration-200 hover:scale-[1.01] hover:bg-accent/90"
+                    disabled={isPending}
+                    size="lg"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      "Đăng ký"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+
+            <CardFooter className="flex flex-col space-y-4 pb-8">
+              <div className="text-center text-sm text-muted-foreground">
+                Đã có tài khoản?{" "}
+                <Link
+                  href="/login"
+                  className="cursor-pointer font-medium text-primary transition-all duration-200 hover:text-primary/80 hover:underline"
+                >
+                  Đăng nhập ngay
+                </Link>
+              </div>
+              <div className="text-center text-xs text-muted-foreground/60">
+                {env.APP_NAME}
+              </div>
+            </CardFooter>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="mt-6 space-y-2"
+        >
+          {BENEFITS.map((benefit) => (
+            <motion.div
+              key={benefit}
+              variants={springItem}
+              className="flex items-center gap-2 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+            >
+              <CheckCircle2 className="size-4 shrink-0 text-accent" />
+              <span>{benefit}</span>
+            </motion.div>
+          ))}
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
