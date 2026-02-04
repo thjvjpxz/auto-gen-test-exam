@@ -224,7 +224,7 @@ export default function RegisterPage() {
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 cursor-pointer text-muted-foreground transition-all duration-200 hover:scale-110 hover:text-foreground"
                             tabIndex={-1}
                             aria-label={
                               showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
@@ -267,7 +267,7 @@ export default function RegisterPage() {
                             onClick={() =>
                               setShowConfirmPassword(!showConfirmPassword)
                             }
-                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 cursor-pointer text-muted-foreground transition-all duration-200 hover:scale-110 hover:text-foreground"
                             tabIndex={-1}
                             aria-label={
                               showConfirmPassword
