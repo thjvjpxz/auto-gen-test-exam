@@ -14,6 +14,7 @@ import {
   EyeOff,
   ShieldCheck,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { motion, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -197,7 +198,7 @@ export default function LoginPage() {
                         animate={{ rotate: [0, 10, -10, 0] }}
                         transition={{ duration: 0.5 }}
                       >
-                        ⚠️
+                        <AlertCircle className="size-4" />
                       </motion.div>
                       {errorMessage}
                     </motion.div>

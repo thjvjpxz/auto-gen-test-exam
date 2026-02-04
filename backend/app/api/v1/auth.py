@@ -1,7 +1,9 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import select
 
 from app.api.deps import DbSessionDep, get_current_user
@@ -10,6 +12,7 @@ from app.models.user import User, UserRole
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 class UserOut(BaseModel):
@@ -93,7 +96,9 @@ async def register_user(
     response_model=TokenResponse,
     summary="Đăng nhập, trả về access_token và set refresh_token cookie",
 )
+@limiter.limit("2/minute")
 async def login(
+    request: Request,
     data: LoginRequest,
     response: Response,
     db: DbSessionDep,
@@ -116,8 +121,6 @@ async def login(
     access_token = create_access_token(subject=subject)
     refresh_token = create_refresh_token(subject=subject)
 
-    # Set refresh token cookie: HttpOnly + Secure + SameSite=Strict
-    # Frontend chỉ dùng access_token cho Authorization header.
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,

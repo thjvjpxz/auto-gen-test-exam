@@ -1,26 +1,17 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { env } from "@/config/env";
 import type { ApiError } from "@/types";
 
 export const api = axios.create({
-  baseURL: env.API_URL,
+  baseURL: "/api",
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 30000,
+  withCredentials: true,
 });
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("access_token")
-        : null;
-
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
     return config;
   },
   (error) => Promise.reject(error),
@@ -28,21 +19,30 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiError>) => {
+  async (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
       const isAuthEndpoint =
         error.config?.url?.includes("/auth/login") ||
-        error.config?.url?.includes("/auth/register");
+        error.config?.url?.includes("/auth/register") ||
+        error.config?.url?.includes("/auth/me");
 
       if (!isAuthEndpoint && typeof window !== "undefined") {
-        localStorage.removeItem("access_token");
-        window.location.href = "/login";
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch {
+          // Suppress logout error
+        }
+
+        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
       }
     }
 
-    // Extract error message from API response
     const responseData = error.response?.data as
-      | { detail?: string | Array<{ msg?: string }>; message?: string }
+      | {
+          detail?: string | Array<{ msg?: string }>;
+          message?: string;
+          error?: string;
+        }
       | undefined;
 
     let apiErrorMessage: string;
@@ -54,7 +54,10 @@ api.interceptors.response.use(
       apiErrorMessage = detail[0]?.msg || "Dữ liệu không hợp lệ";
     } else {
       apiErrorMessage =
-        responseData?.message || error.message || "Đã có lỗi xảy ra";
+        responseData?.message ||
+        responseData?.error ||
+        error.message ||
+        "Đã có lỗi xảy ra";
     }
 
     error.message = apiErrorMessage;

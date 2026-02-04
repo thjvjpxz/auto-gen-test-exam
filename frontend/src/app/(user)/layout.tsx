@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth";
+import { useLogout } from "@/hooks/auth";
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -30,7 +31,8 @@ interface UserLayoutProps {
  */
 export default function UserLayout({ children }: UserLayoutProps) {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, logout } = useAuthStore();
+  const { user, isAuthenticated, isLoading } = useAuthStore();
+  const logoutMutation = useLogout();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -39,8 +41,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
   }, [isLoading, isAuthenticated, router]);
 
   const handleLogout = () => {
-    logout();
-    router.push("/login");
+    logoutMutation.mutate();
   };
 
   const isAdmin = user?.role === "admin";
