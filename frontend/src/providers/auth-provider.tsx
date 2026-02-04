@@ -37,10 +37,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     const syncUserFromCookie = async () => {
-      if (isAuthenticated) {
-        setLoading(false);
-        return;
-      }
+      setLoading(true);
 
       try {
         const user = await authService.getCurrentUser();
@@ -52,12 +49,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           avatarUrl: user.avatar_url || undefined,
         });
       } catch {
+        logout();
+      } finally {
         setLoading(false);
       }
     };
 
     syncUserFromCookie();
-  }, [isAuthenticated, setUser, setLoading]);
+  }, []);
 
   return <>{children}</>;
 }
