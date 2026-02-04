@@ -40,19 +40,25 @@ api.interceptors.response.use(
       }
     }
 
-    // Extract error message from API response 
+    // Extract error message from API response
     const responseData = error.response?.data as
-      | { detail?: string; message?: string }
+      | { detail?: string | Array<{ msg?: string }>; message?: string }
       | undefined;
-    const apiErrorMessage =
-      responseData?.detail ||
-      responseData?.message ||
-      error.message ||
-      "Đã có lỗi xảy ra";
 
-    // Create new Error with API message
-    const enhancedError = new Error(apiErrorMessage);
-    return Promise.reject(enhancedError);
+    let apiErrorMessage: string;
+    const detail = responseData?.detail;
+
+    if (typeof detail === "string") {
+      apiErrorMessage = detail;
+    } else if (Array.isArray(detail) && detail.length > 0) {
+      apiErrorMessage = detail[0]?.msg || "Dữ liệu không hợp lệ";
+    } else {
+      apiErrorMessage =
+        responseData?.message || error.message || "Đã có lỗi xảy ra";
+    }
+
+    error.message = apiErrorMessage;
+    return Promise.reject(error);
   },
 );
 

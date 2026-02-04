@@ -1,11 +1,21 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Mail, Lock, GraduationCap, ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import {
+  Loader2,
+  Mail,
+  Lock,
+  GraduationCap,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { motion, useAnimation } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,6 +47,9 @@ import {
   springItem,
   fadeInDown,
   fadeInScale,
+  blobFloat,
+  blobFloatAlt,
+  shakeAnimation,
 } from "@/lib/motion";
 
 const FORM_DEFAULT_VALUES: LoginFormData = {
@@ -45,6 +58,10 @@ const FORM_DEFAULT_VALUES: LoginFormData = {
 };
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const formControls = useAnimation();
   const loginMutation = useLogin();
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -53,7 +70,11 @@ export default function LoginPage() {
 
   const onSubmit = useCallback(
     (data: LoginFormData) => {
-      loginMutation.mutate(data, {
+      const trimmedData = {
+        ...data,
+        email: data.email.trim(),
+      };
+      loginMutation.mutate(trimmedData, {
         onError: (error) => {
           setFormValidationErrors(form, error);
         },
@@ -74,12 +95,32 @@ export default function LoginPage() {
     );
   }, [loginMutation.error]);
 
+  useEffect(() => {
+    if (errorMessage || loginMutation.error) {
+      formControls.start("shake");
+    }
+  }, [errorMessage, loginMutation.error, formControls]);
+
   const isPending = loginMutation.isPending;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <div className="pointer-events-none absolute -left-32 -top-32 size-96 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 size-96 rounded-full bg-accent/10 blur-3xl" />
+      <motion.div
+        className="pointer-events-none absolute -left-32 -top-32 size-96 rounded-full bg-primary/10 blur-3xl"
+        variants={blobFloat}
+        animate="animate"
+      />
+      <motion.div
+        className="pointer-events-none absolute -bottom-32 -right-32 size-96 rounded-full bg-accent/10 blur-3xl"
+        variants={blobFloatAlt}
+        animate="animate"
+      />
+      <motion.div
+        className="pointer-events-none absolute left-1/4 top-1/3 size-64 rounded-full bg-primary/5 blur-3xl"
+        variants={blobFloatAlt}
+        animate="animate"
+        style={{ animationDelay: "2s" }}
+      />
 
       <motion.div variants={fadeInDown} initial="hidden" animate="visible">
         <Link
@@ -97,8 +138,11 @@ export default function LoginPage() {
         initial="hidden"
         animate="visible"
       >
-        <motion.div variants={springItem}>
-          <Card className="relative overflow-hidden border-2 shadow-lg transition-shadow duration-300 hover:shadow-xl">
+        <motion.div
+          variants={{ ...springItem, ...shakeAnimation }}
+          animate={formControls}
+        >
+          <Card className="relative overflow-hidden border-2 shadow-lg backdrop-blur-sm transition-shadow duration-300 hover:shadow-xl">
             <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-accent" />
 
             <CardHeader className="space-y-1 pt-8 text-center">
@@ -106,9 +150,27 @@ export default function LoginPage() {
                 variants={fadeInScale}
                 className="mb-4 flex justify-center"
               >
-                <div className="group rounded-full bg-primary/10 p-3 transition-all duration-300 hover:scale-105 hover:bg-primary/20">
-                  <GraduationCap className="size-8 text-primary transition-transform duration-300 group-hover:rotate-12" />
-                </div>
+                <motion.div
+                  className="group relative rounded-full bg-primary/10 p-3 transition-all duration-300 hover:scale-105 hover:bg-primary/20"
+                  whileHover={{ rotate: [0, -5, 5, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <GraduationCap className="size-8 text-primary transition-transform duration-300" />
+                  <motion.div
+                    className="absolute -right-1 -top-1"
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [0.7, 1, 0.7],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <Sparkles className="size-4 text-accent" />
+                  </motion.div>
+                </motion.div>
               </motion.div>
               <CardTitle className="text-2xl font-bold">
                 Đăng nhập vào hệ thống
@@ -126,12 +188,17 @@ export default function LoginPage() {
                 >
                   {errorMessage ? (
                     <motion.div
-                      variants={fadeInScale}
-                      initial="hidden"
-                      animate="visible"
-                      className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
                       role="alert"
                     >
+                      <motion.div
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        ⚠️
+                      </motion.div>
                       {errorMessage}
                     </motion.div>
                   ) : null}
@@ -141,19 +208,40 @@ export default function LoginPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <div className="group relative">
-                            <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                        <FormLabel
+                          className={`transition-colors duration-200 ${emailFocused ? "text-primary" : ""}`}
+                        >
+                          Email
+                        </FormLabel>
+                        <div className="group relative">
+                          <motion.div
+                            className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2"
+                            animate={{
+                              scale: emailFocused ? 1.1 : 1,
+                              color: emailFocused
+                                ? "hsl(var(--primary))"
+                                : "hsl(var(--muted-foreground))",
+                            }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Mail className="size-4" />
+                          </motion.div>
+                          <FormControl>
                             <Input
                               type="email"
                               placeholder="name@example.com"
                               className="pl-9 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                               disabled={isPending}
+                              autoFocus
                               {...field}
+                              onFocus={() => setEmailFocused(true)}
+                              onBlur={() => {
+                                field.onBlur();
+                                setEmailFocused(false);
+                              }}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -164,39 +252,79 @@ export default function LoginPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>Mật khẩu</FormLabel>
-                        <FormControl>
-                          <div className="group relative">
-                            <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                        <FormLabel
+                          className={`transition-colors duration-200 ${passwordFocused ? "text-primary" : ""}`}
+                        >
+                          Mật khẩu
+                        </FormLabel>
+                        <div className="group relative">
+                          <motion.div
+                            className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2"
+                            animate={{
+                              scale: passwordFocused ? 1.1 : 1,
+                              color: passwordFocused
+                                ? "hsl(var(--primary))"
+                                : "hsl(var(--muted-foreground))",
+                            }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Lock className="size-4" />
+                          </motion.div>
+                          <FormControl>
                             <Input
-                              type="password"
+                              type={showPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-9 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                              className="pl-9 pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                               disabled={isPending}
                               {...field}
+                              onFocus={() => setPasswordFocused(true)}
+                              onBlur={() => {
+                                field.onBlur();
+                                setPasswordFocused(false);
+                              }}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground transition-all duration-200 hover:scale-110 hover:text-foreground"
+                            tabIndex={-1}
+                            aria-label={
+                              showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                            }
+                          >
+                            {showPassword ? (
+                              <EyeOff className="size-4" />
+                            ) : (
+                              <Eye className="size-4" />
+                            )}
+                          </button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <Button
-                    type="submit"
-                    className="glow-effect w-full transition-all duration-200 hover:scale-[1.01]"
-                    disabled={isPending}
-                    size="lg"
+                  <motion.div
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                   >
-                    {isPending ? (
-                      <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        Đang xử lý...
-                      </>
-                    ) : (
-                      "Đăng nhập"
-                    )}
-                  </Button>
+                    <Button
+                      type="submit"
+                      className="glow-effect w-full transition-all duration-200"
+                      disabled={isPending}
+                      size="lg"
+                    >
+                      {isPending ? (
+                        <>
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          Đang xử lý...
+                        </>
+                      ) : (
+                        "Đăng nhập"
+                      )}
+                    </Button>
+                  </motion.div>
                 </form>
               </Form>
             </CardContent>
@@ -222,14 +350,20 @@ export default function LoginPage() {
           variants={springItem}
           className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground"
         >
-          <div className="flex items-center gap-1.5">
-            <div className="size-1.5 rounded-full bg-accent" />
+          <motion.div
+            className="flex items-center gap-1.5"
+            whileHover={{ scale: 1.05 }}
+          >
+            <ShieldCheck className="size-3.5 text-accent" />
             <span>Bảo mật SSL</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="size-1.5 rounded-full bg-accent" />
+          </motion.div>
+          <motion.div
+            className="flex items-center gap-1.5"
+            whileHover={{ scale: 1.05 }}
+          >
+            <div className="size-1.5 animate-pulse rounded-full bg-green-500" />
             <span>An toàn 100%</span>
-          </div>
+          </motion.div>
         </motion.div>
       </motion.div>
     </div>
