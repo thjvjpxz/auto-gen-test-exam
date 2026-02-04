@@ -73,7 +73,7 @@ export default function AdminLayout({
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-30 cursor-pointer bg-black/50 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
