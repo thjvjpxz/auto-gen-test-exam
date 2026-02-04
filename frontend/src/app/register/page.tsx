@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,8 @@ import {
   GraduationCap,
   ArrowLeft,
   CheckCircle2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -62,6 +64,8 @@ const BENEFITS = [
 ];
 
 export default function RegisterPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const registerMutation = useRegister();
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -159,18 +163,19 @@ export default function RegisterPage() {
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel>Họ và tên</FormLabel>
-                        <FormControl>
-                          <div className="group relative">
-                            <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                        <div className="group relative">
+                          <User className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                          <FormControl>
                             <Input
                               type="text"
                               placeholder="Nguyễn Văn A"
                               className="pl-9 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                               disabled={isPending}
+                              autoFocus
                               {...field}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -182,9 +187,9 @@ export default function RegisterPage() {
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <div className="group relative">
-                            <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                        <div className="group relative">
+                          <Mail className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                          <FormControl>
                             <Input
                               type="email"
                               placeholder="name@example.com"
@@ -192,8 +197,8 @@ export default function RegisterPage() {
                               disabled={isPending}
                               {...field}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -205,18 +210,33 @@ export default function RegisterPage() {
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel>Mật khẩu</FormLabel>
-                        <FormControl>
-                          <div className="group relative">
-                            <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                        <div className="group relative">
+                          <Lock className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                          <FormControl>
                             <Input
-                              type="password"
+                              type={showPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-9 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                              className="pl-9 pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                               disabled={isPending}
                               {...field}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                            tabIndex={-1}
+                            aria-label={
+                              showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                            }
+                          >
+                            {showPassword ? (
+                              <EyeOff className="size-4" />
+                            ) : (
+                              <Eye className="size-4" />
+                            )}
+                          </button>
+                        </div>
                         <FormDescription className="text-xs">
                           Tối thiểu 8 ký tự, bao gồm cả chữ và số
                         </FormDescription>
@@ -231,18 +251,37 @@ export default function RegisterPage() {
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel>Xác nhận mật khẩu</FormLabel>
-                        <FormControl>
-                          <div className="group relative">
-                            <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                        <div className="group relative">
+                          <Lock className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                          <FormControl>
                             <Input
-                              type="password"
+                              type={showConfirmPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-9 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                              className="pl-9 pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                               disabled={isPending}
                               {...field}
                             />
-                          </div>
-                        </FormControl>
+                          </FormControl>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                            tabIndex={-1}
+                            aria-label={
+                              showConfirmPassword
+                                ? "Ẩn mật khẩu"
+                                : "Hiện mật khẩu"
+                            }
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="size-4" />
+                            ) : (
+                              <Eye className="size-4" />
+                            )}
+                          </button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
