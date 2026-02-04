@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   LogOut,
   User,
@@ -20,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth";
+import { useLogout } from "@/hooks/auth";
 import { fadeInDown } from "@/lib/motion";
 
 interface AdminHeaderProps {
@@ -28,12 +28,11 @@ interface AdminHeaderProps {
 }
 
 export function AdminHeader({ onMenuClick, showMenuButton }: AdminHeaderProps) {
-  const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
+  const logoutMutation = useLogout();
 
   const handleLogout = () => {
-    logout();
-    router.push("/login");
+    logoutMutation.mutate();
   };
 
   return (

@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import dynamic from "next/dynamic";
 import { QueryProvider } from "./query-provider";
 import { ThemeProvider } from "./theme-provider";
+import { AuthProvider } from "./auth-provider";
 
 const Toaster = dynamic(() => import("sonner").then((mod) => mod.Toaster), {
   ssr: false,
@@ -21,8 +22,10 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryProvider>
       <ThemeProvider defaultTheme="light" storageKey="exam-app-theme">
-        {children}
-        {mounted && <Toaster position="top-center" richColors />}
+        <AuthProvider>
+          {children}
+          {mounted && <Toaster position="top-center" richColors />}
+        </AuthProvider>
       </ThemeProvider>
     </QueryProvider>
   );

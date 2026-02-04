@@ -31,19 +31,18 @@ function mapUserOutToUser(userOut: UserOut) {
 
 /**
  * Login mutation hook with React Query.
- * Handles authentication, updates auth store, and navigates to dashboard.
+ * Handles authentication via Next.js proxy, updates auth store, and navigates to dashboard.
  *
  * @returns Mutation object with login function
  */
 export function useLogin() {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { setUser, setToken } = useAuthStore();
+  const { setUser } = useAuthStore();
 
   return useMutation({
     mutationFn: (data: LoginRequest) => authService.login(data),
     onSuccess: (response) => {
-      setToken(response.access_token);
       setUser(mapUserOutToUser(response.user));
       queryClient.invalidateQueries({ queryKey: authKeys.me() });
 
@@ -80,13 +79,12 @@ export function useRegister() {
 
 /**
  * Current user query hook with React Query.
- * Fetches user data with automatic caching and deduplication.
+ * Fetches user data from cookie-based session.
  *
  * @returns Query object with user data
  */
 export function useMe() {
-  const { setUser, logout, getToken } = useAuthStore();
-  const token = getToken();
+  const { setUser, logout, isAuthenticated } = useAuthStore();
 
   return useQuery({
     queryKey: authKeys.me(),
@@ -103,8 +101,32 @@ export function useMe() {
         throw error;
       }
     },
-    enabled: !!token,
+    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
     retry: false,
+  });
+}
+
+/**
+ * Logout mutation hook.
+ * Calls logout API to clear cookie and updates auth store.
+ *
+ * @returns Mutation object with logout function
+ */
+export function useLogout() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const { logout: clearStore } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async () => {
+      await fetch("/api/auth/logout", { method: "POST" });
+    },
+    onSuccess: () => {
+      clearStore();
+      queryClient.clear();
+      router.push("/login");
+      toast.success("Đã đăng xuất");
+    },
   });
 }
