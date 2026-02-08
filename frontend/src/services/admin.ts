@@ -53,7 +53,24 @@ export interface UserDetailOut {
   total_exams_taken: number;
   average_score: number | null;
   pass_rate: number | null;
+  coin_balance: number;
   recent_attempts: UserExamHistoryItem[];
+}
+
+export interface AdminCoinAdjustmentRequest {
+  amount: number;
+  reason: string;
+}
+
+export interface AdminCoinAdjustmentResponse {
+  user_id: number;
+  balance_before: number;
+  balance_after: number;
+  adjustment_amount: number;
+  reason: string;
+  adjusted_by_admin_id: number;
+  adjusted_by_admin_name: string;
+  adjusted_at: string;
 }
 
 export interface UserUpdateRequest {
@@ -165,6 +182,20 @@ export const adminService = {
     const response = await api.get<AdminAttemptListResponse>(
       `${ADMIN_API_BASE}/attempts`,
       { params },
+    );
+    return response.data;
+  },
+
+  /**
+   * Adjust user coin balance (admin only)
+   */
+  async adjustUserCoins(
+    userId: number,
+    data: AdminCoinAdjustmentRequest,
+  ): Promise<AdminCoinAdjustmentResponse> {
+    const response = await api.patch<AdminCoinAdjustmentResponse>(
+      `${ADMIN_API_BASE}/users/${userId}/coins`,
+      data,
     );
     return response.data;
   },

@@ -12,6 +12,8 @@ from app.models.user import User, UserRole
 from app.schemas.admin import (
     AdminAttemptListOut,
     AdminAttemptListResponse,
+    AdminCoinAdjustmentRequest,
+    AdminCoinAdjustmentResponse,
     AdminStatsOut,
     UserDetailOut,
     UserExamHistoryItem,
@@ -213,6 +215,10 @@ async def get_user_detail(
             )
         )
 
+    from app.services.wallet_service import WalletService
+    wallet_service = WalletService(db)
+    coin_balance = await wallet_service.get_balance(user_id)
+
     return UserDetailOut(
         id=user.id,
         email=user.email,
@@ -225,6 +231,7 @@ async def get_user_detail(
         total_exams_taken=total_exams_taken,
         average_score=average_score,
         pass_rate=pass_rate,
+        coin_balance=coin_balance,
         recent_attempts=recent_attempts,
     )
 
@@ -353,3 +360,69 @@ async def list_all_attempts(
         )
 
     return AdminAttemptListResponse(items=items, total=total, skip=skip, limit=limit)
+
+
+@router.patch("/users/{user_id}/coins", response_model=AdminCoinAdjustmentResponse)
+async def adjust_user_coins(
+    user_id: Annotated[int, Path(gt=0)],
+    request: AdminCoinAdjustmentRequest,
+    db: DbSessionDep,
+    current_user: AdminUser,
+) -> AdminCoinAdjustmentResponse:
+    """Adjust user coin balance (admin only).
+    
+    Args:
+        user_id: User ID to adjust coins for.
+        request: Adjustment details (amount and reason).
+        
+    Returns:
+        AdminCoinAdjustmentResponse with adjustment details.
+        
+    Raises:
+        HTTPException: If user not found.
+    """
+    user = (await db.execute(
+        select(User).where(User.id == user_id, User.is_deleted == False)  # noqa: E712
+    )).scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    from app.models.coin_transaction import TransactionType
+    from app.services.wallet_service import WalletService
+    from datetime import datetime, timezone
+    
+    wallet_service = WalletService(db)
+    
+    balance_before = await wallet_service.get_balance(user_id)
+    
+    meta = {
+        "reason": request.reason,
+        "admin_id": current_user.id,
+        "admin_name": current_user.name,
+        "admin_email": current_user.email,
+    }
+    
+    transaction = await wallet_service.add_transaction(
+        user_id=user_id,
+        amount=request.amount,
+        transaction_type=TransactionType.ADJUSTMENT,
+        meta=meta,
+    )
+    
+    await db.commit()
+    
+    return AdminCoinAdjustmentResponse(
+        user_id=user_id,
+        balance_before=balance_before,
+        balance_after=transaction.balance_after,
+        adjustment_amount=request.amount,
+        reason=request.reason,
+        adjusted_by_admin_id=current_user.id,
+        adjusted_by_admin_name=current_user.name,
+        adjusted_at=datetime.now(timezone.utc),
+    )
+

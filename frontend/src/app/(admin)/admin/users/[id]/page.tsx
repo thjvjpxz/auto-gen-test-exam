@@ -16,9 +16,11 @@ import {
   XCircle,
   Trash2,
   UserCog,
+  Coins,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -53,9 +55,12 @@ import {
   useAdminUserDetail,
   useUpdateAdminUser,
   useDeleteAdminUser,
+  useAdjustUserCoins,
 } from "@/hooks/admin";
 import { toast } from "sonner";
 import { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -92,6 +97,49 @@ export default function UserDetailPage({ params }: PageProps) {
       router.push("/admin/users");
     } catch {
       toast.error("Không thể xóa người dùng");
+    }
+  };
+
+  const [coinDialogOpen, setCoinDialogOpen] = useState(false);
+  const [coinAmount, setCoinAmount] = useState<string>("");
+  const [coinReason, setCoinReason] = useState("");
+  const adjustCoinMutation = useAdjustUserCoins();
+
+  const handleCoinAdjustment = async () => {
+    const amount = parseInt(coinAmount, 10);
+
+    if (isNaN(amount) || amount === 0) {
+      toast.error("Số lượng coin không hợp lệ");
+      return;
+    }
+
+    if (amount < -10000 || amount > 10000) {
+      toast.error("Số lượng phải trong khoảng -10,000 đến 10,000");
+      return;
+    }
+
+    if (!coinReason.trim() || coinReason.trim().length < 3) {
+      toast.error("Lý do phải có ít nhất 3 ký tự");
+      return;
+    }
+
+    try {
+      await adjustCoinMutation.mutateAsync({
+        userId,
+        data: {
+          amount,
+          reason: coinReason.trim(),
+        },
+      });
+      toast.success(
+        `Đã ${amount > 0 ? "cộng" : "trừ"} ${Math.abs(amount)} coin`,
+      );
+      setCoinDialogOpen(false);
+      setCoinAmount("");
+      setCoinReason("");
+      refetch();
+    } catch {
+      toast.error("Không thể điều chỉnh coin");
     }
   };
 
@@ -223,7 +271,7 @@ export default function UserDetailPage({ params }: PageProps) {
       </div>
 
       {/* User Info Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card className="border-0 shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex size-12 items-center justify-center rounded-xl bg-blue-100">
@@ -271,6 +319,31 @@ export default function UserDetailPage({ params }: PageProps) {
               <p className="text-sm text-muted-foreground">Số bài thi</p>
               <p className="text-2xl font-bold">{user.total_exams_taken}</p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex size-12 items-center justify-center rounded-xl bg-yellow-100">
+                  <Coins className="size-6 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Số dư Coin</p>
+                  <p className="text-2xl font-bold">{user.coin_balance}</p>
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 w-full"
+              onClick={() => setCoinDialogOpen(true)}
+            >
+              <Coins className="mr-2 size-4" />
+              Điều chỉnh
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -379,6 +452,85 @@ export default function UserDetailPage({ params }: PageProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Coin Adjustment Dialog */}
+      <Dialog open={coinDialogOpen} onOpenChange={setCoinDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Điều chỉnh Coin</DialogTitle>
+            <DialogDescription>
+              Thay đổi số dư coin cho <strong>{user.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="coin-amount">
+                Số lượng (+ để cộng, - để trừ)
+              </Label>
+              <Input
+                id="coin-amount"
+                type="number"
+                placeholder="Ví dụ: 100 hoặc -50"
+                value={coinAmount}
+                onChange={(e) => setCoinAmount(e.target.value)}
+                min="-10000"
+                max="10000"
+              />
+              <p className="text-xs text-muted-foreground">
+                Giới hạn: -10,000 đến 10,000
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="coin-reason">Lý do</Label>
+              <Textarea
+                id="coin-reason"
+                placeholder="Ví dụ: Bù đắp lỗi hệ thống, thưởng sự kiện..."
+                value={coinReason}
+                onChange={(e) => setCoinReason(e.target.value)}
+                rows={3}
+                maxLength={200}
+              />
+              <p className="text-xs text-muted-foreground">
+                {coinReason.length}/200 ký tự
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Số dư hiện tại:</span>
+                <span className="font-semibold">{user.coin_balance}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Số dư sau điều chỉnh:
+                </span>
+                <span className="font-bold text-primary">
+                  {coinAmount && !isNaN(parseInt(coinAmount, 10))
+                    ? user.coin_balance + parseInt(coinAmount, 10)
+                    : user.coin_balance}
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCoinDialogOpen(false);
+                setCoinAmount("");
+                setCoinReason("");
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleCoinAdjustment}
+              disabled={adjustCoinMutation.isPending}
+            >
+              {adjustCoinMutation.isPending ? "Đang xử lý..." : "Xác nhận"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
