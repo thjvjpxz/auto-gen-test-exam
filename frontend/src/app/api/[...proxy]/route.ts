@@ -78,17 +78,30 @@ async function proxyHandler(request: NextRequest, { params }: RouteParams) {
     const responseContentType =
       backendResponse.headers.get("content-type") || "";
 
-    let responseBody: BodyInit;
-    if (responseContentType.includes("application/json")) {
-      responseBody = await backendResponse.text();
-    } else {
-      responseBody = await backendResponse.arrayBuffer();
-    }
+    let response: NextResponse;
 
-    const response = new NextResponse(responseBody, {
-      status: backendResponse.status,
-      statusText: backendResponse.statusText,
-    });
+    if (
+      backendResponse.status === 204 ||
+      backendResponse.status === 205 ||
+      backendResponse.status === 304
+    ) {
+      response = new NextResponse(null, {
+        status: backendResponse.status,
+        statusText: backendResponse.statusText,
+      });
+    } else {
+      let responseBody: BodyInit;
+      if (responseContentType.includes("application/json")) {
+        responseBody = await backendResponse.text();
+      } else {
+        responseBody = await backendResponse.arrayBuffer();
+      }
+
+      response = new NextResponse(responseBody, {
+        status: backendResponse.status,
+        statusText: backendResponse.statusText,
+      });
+    }
 
     backendResponse.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();

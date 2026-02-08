@@ -13,6 +13,8 @@ import {
   Award,
   FileCode,
   ClipboardList,
+  Coins,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,6 +113,91 @@ export function ExamResult({ result }: ExamResultProps) {
           </div>
         </CardContent>
       </Card>
+
+      {!!(result.coin_reward && result.coin_reward > 0) && (
+        <Card className="overflow-hidden border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
+          <div className="h-1.5 bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500" />
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+              <div className="flex items-center gap-5">
+                <div className="relative">
+                  <div className="flex size-20 items-center justify-center rounded-full bg-amber-500 shadow-lg">
+                    <Coins className="size-10 text-white" />
+                  </div>
+                  <div className="absolute -right-1 -top-1 flex size-8 items-center justify-center rounded-full bg-yellow-400 shadow-md">
+                    <Sparkles className="size-4 text-yellow-800" />
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-amber-700">
+                    Phần thưởng Coin!
+                  </h2>
+                  <p className="mt-1 text-muted-foreground">
+                    Bạn đã nhận được phần thưởng
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-6xl font-bold tabular-nums text-amber-600">
+                  +{result.coin_reward.toLocaleString()}
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Số dư mới: {result.coin_balance_after?.toLocaleString() ?? 0}
+                </p>
+              </div>
+            </div>
+
+            {result.reward_breakdown && (
+              <div className="mt-6 grid grid-cols-2 gap-3 border-t pt-4 md:grid-cols-4">
+                {result.reward_breakdown.base_reward > 0 && (
+                  <div className="rounded-lg bg-white/60 p-3 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      Phần thưởng cơ bản
+                    </p>
+                    <p className="mt-1 font-semibold text-amber-700">
+                      +{result.reward_breakdown.base_reward}
+                    </p>
+                  </div>
+                )}
+                {result.reward_breakdown.performance_bonus &&
+                  result.reward_breakdown.performance_bonus > 0 && (
+                    <div className="rounded-lg bg-white/60 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        Thưởng hiệu suất
+                      </p>
+                      <p className="mt-1 font-semibold text-green-700">
+                        +{result.reward_breakdown.performance_bonus}
+                      </p>
+                    </div>
+                  )}
+                {result.reward_breakdown.speed_bonus &&
+                  result.reward_breakdown.speed_bonus > 0 && (
+                    <div className="rounded-lg bg-white/60 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        Thưởng tốc độ
+                      </p>
+                      <p className="mt-1 font-semibold text-blue-700">
+                        +{result.reward_breakdown.speed_bonus}
+                      </p>
+                    </div>
+                  )}
+                {result.reward_breakdown.perfect_score_bonus &&
+                  result.reward_breakdown.perfect_score_bonus > 0 && (
+                    <div className="rounded-lg bg-white/60 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        Thưởng điểm tuyệt đối
+                      </p>
+                      <p className="mt-1 font-semibold text-purple-700">
+                        +{result.reward_breakdown.perfect_score_bonus}
+                      </p>
+                    </div>
+                  )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { QueryProvider } from "./query-provider";
 import { ThemeProvider } from "./theme-provider";
@@ -15,9 +15,9 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
-  const [mounted] = useState(() => {
+  const mounted = useMemo(() => {
     return typeof window !== "undefined";
-  });
+  }, []);
 
   return (
     <QueryProvider>

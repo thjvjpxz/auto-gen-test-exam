@@ -241,3 +241,26 @@ class UserAttemptHistoryResponse(BaseModel):
     items: list[UserAttemptHistoryItem] = Field(description="List of user's attempts")
     total: int = Field(description="Total number of attempts")
 
+
+class ExamConflictResponse(BaseModel):
+    """Response schema when user tries to start exam while having active attempt on another exam."""
+
+    model_config = ConfigDict(
+        ser_json_timedelta="iso8601",
+    )
+
+    message: str = Field(description="Error message")
+    existing_attempt_id: int = Field(description="ID of the existing in-progress attempt")
+    existing_exam_id: int = Field(description="ID of the exam being attempted")
+    existing_exam_title: str = Field(description="Title of the exam being attempted")
+    started_at: datetime = Field(description="When the existing attempt started")
+    duration: int = Field(description="Exam duration in minutes")
+    time_remaining_seconds: int = Field(description="Estimated time remaining in seconds")
+
+    @field_serializer("started_at")
+    def serialize_started_at(self, value: datetime) -> str:
+        """Serialize datetime with UTC timezone suffix for frontend parsing."""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.isoformat()
+

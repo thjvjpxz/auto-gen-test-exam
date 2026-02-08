@@ -146,10 +146,119 @@ erDiagram
   }
 }
 
+---
+
+## HINTS GENERATION
+
+Cho mỗi câu hỏi, tạo 3 hints theo cấp độ tăng dần:
+
+**Level 1 (5 coins)**: Gợi ý khái niệm hoặc hướng tiếp cận cơ bản
+- SQL: Đề cập đến các SQL clauses/functions cần dùng (JOIN, GROUP BY, WHERE, etc.)
+- Testing: Gợi ý kỹ thuật kiểm thử phù hợp (EP, BVA, Decision Table, State Transition)
+
+**Level 2 (8 coins)**: Hướng dẫn cụ thể hơn
+- SQL: Cung cấp cấu trúc query một phần hoặc điều kiện quan trọng
+- Testing: Liệt kê các lớp tương đương hoặc giá trị biên cần test
+
+**Level 3 (12 coins)**: Gần như là giải pháp hoàn chỉnh
+- SQL: Query hoàn chỉnh với một vài chỗ cần điền
+- Testing: Ví dụ test cases hoàn chỉnh với input và expected output
+
+Mỗi hint phải có:
+- level: 1, 2, hoặc 3
+- cost: 5, 8, hoặc 12 (tương ứng)
+- preview: Xem trước ngắn gọn 1 dòng (tối đa 50 ký tự)
+- content: Nội dung hint đầy đủ (giải thích chi tiết)
+
+**Ví dụ hints cho SQL question:**
+```json
+"sql.question_1": [
+  {
+    "level": 1,
+    "cost": 5,
+    "preview": "Gợi ý về cú pháp JOIN",
+    "content": "Câu hỏi yêu cầu kết hợp dữ liệu từ nhiều bảng. Sử dụng INNER JOIN để kết nối các bảng liên quan. Cú pháp: SELECT columns FROM table1 INNER JOIN table2 ON condition"
+  },
+  {
+    "level": 2,
+    "cost": 8,
+    "preview": "Gợi ý về điều kiện lọc",
+    "content": "Sử dụng WHERE để lọc dữ liệu theo điều kiện cụ thể. Kết hợp với ORDER BY để sắp xếp kết quả theo yêu cầu đề bài"
+  },
+  {
+    "level": 3,
+    "cost": 12,
+    "preview": "Gợi ý về câu truy vấn hoàn chỉnh",
+    "content": "SELECT e.column1, t.column2 FROM table1 e INNER JOIN table2 t ON e.id = t.foreign_id WHERE e.condition > value ORDER BY e.column ASC"
+  }
+]
+```
+
+**Ví dụ hints cho Testing question:**
+```json
+"testing.question_1": [
+  {
+    "level": 1,
+    "cost": 5,
+    "preview": "Gợi ý về kỹ thuật kiểm thử",
+    "content": "Bài toán có các khoảng giá trị rõ ràng. Kỹ thuật phù hợp: Equivalence Partitioning (phân vùng tương đương) và Boundary Value Analysis (phân tích giá trị biên)"
+  },
+  {
+    "level": 2,
+    "cost": 8,
+    "preview": "Gợi ý về lớp tương đương và giá trị biên",
+    "content": "Xác định các lớp tương đương dựa trên điều kiện. Với mỗi lớp, tìm giá trị biên (boundary values) ở ranh giới giữa các lớp"
+  },
+  {
+    "level": 3,
+    "cost": 12,
+    "preview": "Gợi ý về test cases cụ thể",
+    "content": "Test cases nên bao gồm: giá trị hợp lệ trong mỗi lớp, giá trị biên, và giá trị không hợp lệ. Ví dụ: nếu điều kiện là 'tuổi < 18', test: 17 (biên hợp lệ), 18 (biên không hợp lệ), -1 (invalid)"
+  }
+]
+```
+
+---
+
+## OUTPUT FORMAT (JSON)
+
+{
+  "exam_title": "string - Tiêu đề cụ thể theo chủ đề, ví dụ: Đề thi CSDL & Kiểm thử - Hệ thống Quản lý Gym",
+  "sql_part": {
+    "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh theo cú pháp trên",
+    "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
+  },
+  "testing_part": {
+    "scenario": "string - Mô tả tình huống nghiệp vụ chi tiết",
+    "rules_table": [
+      {"condition": "string - Điều kiện", "result": "string - Kết quả"}
+    ],
+    "question": "string - Yêu cầu cụ thể cho thí sinh"
+  },
+  "hints_catalog": {
+    "sql.question_1": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ],
+    "sql.question_2": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ],
+    "testing.question_1": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ]
+  }
+}
+
 **LƯU Ý QUAN TRỌNG:**
 - KHÔNG trả về ví dụ mẫu, PHẢI sinh nội dung hoàn toàn mới
 - Mermaid code PHẢI tuân thủ cú pháp ở trên, KHÔNG dùng PRIMARY KEY(...) hay UNIQUE
 - Các con số trong bài Testing PHẢI nhất quán và tính toán được
+- PHẢI có đầy đủ hints cho tất cả câu hỏi (sql.question_1, sql.question_2, testing.question_1)
 """
 
 # SQL-only prompt - generates only SQL part
@@ -218,6 +327,17 @@ TABLE {
 
 ---
 
+## HINTS GENERATION
+
+Cho mỗi câu hỏi SQL, tạo 3 hints theo cấp độ:
+- Level 1 (5 coins): Gợi ý về SQL clauses/functions cần dùng
+- Level 2 (8 coins): Cấu trúc query một phần hoặc điều kiện quan trọng
+- Level 3 (12 coins): Query hoàn chỉnh với một vài chỗ cần điền
+
+Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
@@ -226,10 +346,22 @@ TABLE {
     "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh theo cú pháp trên",
     "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
   },
-  "testing_part": null
+  "testing_part": null,
+  "hints_catalog": {
+    "sql.question_1": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ],
+    "sql.question_2": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ]
+  }
 }
 
-**LƯU Ý:** Mermaid code PHẢI tuân thủ cú pháp ở trên. KHÔNG dùng PRIMARY KEY(...), UNIQUE, CONSTRAINT.
+**LƯU Ý:** PHẢI có đầy đủ hints cho tất cả câu hỏi SQL.
 """
 
 # Testing-only prompt - generates only Testing part
@@ -252,6 +384,19 @@ Bạn là một chuyên gia soạn đề thi CNTT với 20 năm kinh nghiệm. N
 - Xác định kỹ thuật kiểm thử phù hợp và giải thích lý do
 - Thiết kế tối thiểu 5-10 test cases
 
+---
+
+## HINTS GENERATION
+
+Cho câu hỏi Testing, tạo 3 hints theo cấp độ:
+- Level 1 (5 coins): Gợi ý kỹ thuật kiểm thử phù hợp
+- Level 2 (8 coins): Liệt kê lớp tương đương/giá trị biên
+- Level 3 (12 coins): Ví dụ test cases hoàn chỉnh
+
+Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
@@ -263,10 +408,17 @@ Bạn là một chuyên gia soạn đề thi CNTT với 20 năm kinh nghiệm. N
       {"condition": "string - Điều kiện", "result": "string - Kết quả"}
     ],
     "question": "string - Yêu cầu cụ thể cho thí sinh"
+  },
+  "hints_catalog": {
+    "testing.question_1": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ]
   }
 }
 
-**LƯU Ý:** Các con số trong bài Testing PHẢI nhất quán và tính toán được.
+**LƯU Ý:** PHẢI có đầy đủ hints cho câu hỏi Testing.
 """
 
 
@@ -417,3 +569,53 @@ class ExamGeneratorService:
                 raise ValueError(
                     f"Missing required keys in testing_part: {testing_missing}"
                 )
+        
+        # Validate hints_catalog
+        if 'hints_catalog' not in exam_data:
+            raise ValueError("Missing 'hints_catalog' in exam data")
+        
+        hints = exam_data['hints_catalog']
+        
+        # Validate SQL hints if SQL part exists
+        if exam_data.get('sql_part'):
+            questions = exam_data['sql_part'].get('questions', [])
+            for i in range(1, len(questions) + 1):
+                key = f"sql.question_{i}"
+                if key not in hints:
+                    raise ValueError(f"Missing hints for {key}")
+                self._validate_hint_levels(hints[key], key)
+        
+        # Validate Testing hints if Testing part exists
+        if exam_data.get('testing_part'):
+            key = "testing.question_1"
+            if key not in hints:
+                raise ValueError(f"Missing hints for {key}")
+            self._validate_hint_levels(hints[key], key)
+
+    def _validate_hint_levels(self, hint_list: list, question_key: str) -> None:
+        """Validate that a hint list has exactly 3 levels with correct structure.
+        
+        Args:
+            hint_list: List of hints for a question.
+            question_key: The question key (e.g., 'sql.question_1').
+            
+        Raises:
+            ValueError: If hint structure is invalid.
+        """
+        if len(hint_list) != 3:
+            raise ValueError(f"{question_key} must have exactly 3 hints, got {len(hint_list)}")
+        
+        expected_costs = [5, 8, 12]
+        for i, hint in enumerate(hint_list, 1):
+            if hint.get('level') != i:
+                raise ValueError(
+                    f"{question_key} hint {i}: expected level={i}, got {hint.get('level')}"
+                )
+            if hint.get('cost') != expected_costs[i-1]:
+                raise ValueError(
+                    f"{question_key} hint {i}: expected cost={expected_costs[i-1]}, got {hint.get('cost')}"
+                )
+            if not hint.get('preview'):
+                raise ValueError(f"{question_key} hint {i}: missing 'preview'")
+            if not hint.get('content'):
+                raise ValueError(f"{question_key} hint {i}: missing 'content'")
