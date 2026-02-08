@@ -565,6 +565,11 @@ export interface CoinTransaction {
   };
 }
 
+export interface CoinTransactionListResponse {
+  transactions: CoinTransaction[];
+  total: number;
+}
+
 export interface HintCatalogItem {
   level: number;
   cost: number;

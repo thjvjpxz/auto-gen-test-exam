@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getProgression, getCoinTransactions } from "@/services/progression";
-import type { UserProgression, CoinTransaction } from "@/types";
+import type { UserProgression, CoinTransactionListResponse } from "@/types";
 
 export function useProgression() {
   return useQuery<UserProgression>({
@@ -10,7 +10,7 @@ export function useProgression() {
 }
 
 export function useCoinTransactions(limit = 20, offset = 0) {
-  return useQuery<CoinTransaction[]>({
+  return useQuery<CoinTransactionListResponse>({
     queryKey: ["coin-transactions", limit, offset],
     queryFn: () => getCoinTransactions(limit, offset),
   });

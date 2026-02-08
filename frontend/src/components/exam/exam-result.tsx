@@ -114,7 +114,7 @@ export function ExamResult({ result }: ExamResultProps) {
         </CardContent>
       </Card>
 
-      {result.coin_reward && result.coin_reward > 0 && (
+      {!!(result.coin_reward && result.coin_reward > 0) && (
         <Card className="overflow-hidden border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
           <div className="h-1.5 bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500" />
           <CardContent className="pt-6">

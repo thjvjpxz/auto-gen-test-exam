@@ -1,4 +1,4 @@
-import type { UserProgression, CoinTransaction } from "@/types";
+import type { UserProgression, CoinTransactionListResponse } from "@/types";
 
 const BASE_URL = "/api/v1";
 
@@ -17,7 +17,7 @@ export async function getProgression(): Promise<UserProgression> {
 export async function getCoinTransactions(
   limit = 20,
   offset = 0,
-): Promise<CoinTransaction[]> {
+): Promise<CoinTransactionListResponse> {
   const res = await fetch(
     `${BASE_URL}/me/coin-transactions?limit=${limit}&offset=${offset}`,
     {

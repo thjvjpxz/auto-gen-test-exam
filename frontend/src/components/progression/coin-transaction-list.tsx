@@ -26,10 +26,7 @@ export function CoinTransactionList({
   const [page, setPage] = useState(0);
   const offset = page * pageSize;
 
-  const { data: transactions, isLoading } = useCoinTransactions(
-    pageSize,
-    offset,
-  );
+  const { data: response, isLoading } = useCoinTransactions(pageSize, offset);
 
   if (isLoading) {
     return (
@@ -40,6 +37,8 @@ export function CoinTransactionList({
       </div>
     );
   }
+
+  const transactions = response?.transactions ?? [];
 
   if (!transactions || transactions.length === 0) {
     return (

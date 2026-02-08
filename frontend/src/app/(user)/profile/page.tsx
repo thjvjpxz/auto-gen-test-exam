@@ -16,8 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/stores/auth";
 import { useMyAttempts } from "@/hooks/attempt";
+import { CoinTransactionList } from "@/components/progression/coin-transaction-list";
 import type { UserAttemptHistoryItem } from "@/types";
 
 /**
@@ -142,61 +144,85 @@ export default function ProfilePage() {
         </Card>
       </div>
 
-      {/* Exam History */}
-      <Card className="border border-border">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-semibold">
-            Lịch sử làm bài
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4 py-3">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                  <Skeleton className="h-8 w-20" />
+      {/* Tabs for History */}
+      <Tabs defaultValue="attempts" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="attempts">Lịch sử làm bài</TabsTrigger>
+          <TabsTrigger value="coins">Lịch sử Coin</TabsTrigger>
+        </TabsList>
+
+        {/* Exam History Tab */}
+        <TabsContent value="attempts" className="space-y-4">
+          <Card className="border border-border">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold">
+                Lịch sử làm bài
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-4 py-3">
+                      <Skeleton className="h-10 w-10 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-3 w-1/4" />
+                      </div>
+                      <Skeleton className="h-8 w-20" />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : error ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Không thể tải lịch sử làm bài
-              </p>
-            </div>
-          ) : !attemptsData?.items.length ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-base font-medium text-foreground">
-                Chưa có bài làm nào
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Bắt đầu làm bài thi để xem lịch sử tại đây
-              </p>
-              <Link href="/exams">
-                <Button className="mt-4 cursor-pointer">Xem bài thi</Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {attemptsData.items.map((attempt: UserAttemptHistoryItem) => (
-                <AttemptRow
-                  key={attempt.id}
-                  attempt={attempt}
-                  formatDate={formatDate}
-                  formatDuration={formatDuration}
-                  getExamTypeLabel={getExamTypeLabel}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    Không thể tải lịch sử làm bài
+                  </p>
+                </div>
+              ) : !attemptsData?.items.length ? (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <h3 className="text-base font-medium text-foreground">
+                    Chưa có bài làm nào
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Bắt đầu làm bài thi để xem lịch sử tại đây
+                  </p>
+                  <Link href="/exams">
+                    <Button className="mt-4 cursor-pointer">Xem bài thi</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {attemptsData.items.map((attempt: UserAttemptHistoryItem) => (
+                    <AttemptRow
+                      key={attempt.id}
+                      attempt={attempt}
+                      formatDate={formatDate}
+                      formatDuration={formatDuration}
+                      getExamTypeLabel={getExamTypeLabel}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Coin Transaction History Tab */}
+        <TabsContent value="coins" className="space-y-4">
+          <Card className="border border-border">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold">
+                Lịch sử giao dịch Coin
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CoinTransactionList />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
