@@ -8,7 +8,10 @@ from app.db.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.attempt import ExamAttempt
+    from app.models.coin_transaction import CoinTransaction
     from app.models.exam import Exam
+    from app.models.hint_usage import AttemptHintUsage
+    from app.models.wallet import UserWallet
 
 
 class UserRole(str, enum.Enum):
@@ -40,6 +43,22 @@ class User(Base, TimestampMixin):
     )
     attempts: Mapped[list["ExamAttempt"]] = relationship(
         "ExamAttempt",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    wallet: Mapped["UserWallet"] = relationship(
+        "UserWallet",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    coin_transactions: Mapped[list["CoinTransaction"]] = relationship(
+        "CoinTransaction",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    hint_usages: Mapped[list["AttemptHintUsage"]] = relationship(
+        "AttemptHintUsage",
         back_populates="user",
         cascade="all, delete-orphan",
     )

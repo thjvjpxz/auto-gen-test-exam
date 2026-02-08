@@ -447,6 +447,14 @@ export interface ExamSubmitResponse {
   flagged_for_review: boolean;
   grading: ExamGrading;
   submitted_answers?: SubmittedAnswers | null;
+  coin_reward?: number | null;
+  coin_balance_after?: number | null;
+  reward_breakdown?: {
+    base_reward: number;
+    performance_bonus?: number;
+    speed_bonus?: number;
+    perfect_score_bonus?: number;
+  } | null;
 }
 
 export interface ExamGrading {
@@ -512,4 +520,67 @@ export interface UserAttemptHistoryItem {
 export interface UserAttemptHistoryResponse {
   items: UserAttemptHistoryItem[];
   total: number;
+}
+
+// ========== GAMIFICATION TYPES ==========
+
+export interface UserProgression {
+  coin_balance: number;
+  lifetime_earned: number;
+  lifetime_spent: number;
+}
+
+export type CoinTransactionType = "exam_reward" | "hint_purchase";
+
+export interface CoinTransaction {
+  id: number;
+  type: CoinTransactionType;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  created_at: string;
+  meta?: {
+    exam_title?: string;
+    question_key?: string;
+    hint_level?: number;
+  };
+}
+
+export interface HintCatalogItem {
+  level: number;
+  cost: number;
+  preview: string;
+  content?: string;
+  is_purchased: boolean;
+  is_locked: boolean;
+}
+
+export interface HintPurchaseRequest {
+  question_key: string;
+  hint_level: number;
+}
+
+export interface HintPurchaseResponse {
+  hint_content: string;
+  coin_spent: number;
+  new_balance: number;
+}
+
+export interface PurchasedHint {
+  question_key: string;
+  hint_level: number;
+  hint_content: string;
+  coin_cost: number;
+}
+
+export interface CoinRewardBreakdown {
+  base_reward: number;
+  score_bonus: number;
+  trust_bonus: number;
+  hint_penalty: number;
+}
+
+export interface CoinReward {
+  total_earned: number;
+  breakdown: CoinRewardBreakdown;
 }

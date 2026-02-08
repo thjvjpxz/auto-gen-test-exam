@@ -11,9 +11,10 @@ export function useStartExam() {
 
   return useMutation({
     mutationFn: (examId: number) => attemptService.startExam(examId),
-    onSuccess: (data) => {
+    onSuccess: (data, examId) => {
       initAttempt({
         attemptId: data.attempt_id,
+        examId,
         examData: data.exam_data,
         startedAt: data.started_at,
         duration: data.duration,

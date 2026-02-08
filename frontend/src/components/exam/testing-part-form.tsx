@@ -22,6 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
+import { useHintCatalog, usePurchasedHints } from "@/hooks/use-hint-catalog";
+import { usePurchaseHint } from "@/hooks/use-purchase-hint";
+import { HintButton } from "./hint-button";
+import { HintPanel } from "./hint-panel";
 import type { ExamData, TestCaseItem } from "@/types";
 
 const TESTING_TECHNIQUES = [
@@ -44,11 +48,17 @@ interface TestingPartFormProps {
 export function TestingPartForm({ testingPart }: TestingPartFormProps) {
   const updateTestingAnswer = useExamAttemptStore((s) => s.updateTestingAnswer);
   const answers = useExamAttemptStore((s) => s.answers);
+  const attemptId = useExamAttemptStore((s) => s.attemptId);
+  const examId = useExamAttemptStore((s) => s.examId);
 
   const testingAnswers = useMemo(
     () => answers.testing_part ?? { test_cases: [] },
     [answers.testing_part],
   );
+
+  const { data: hintCatalog } = useHintCatalog(examId);
+  const { data: purchasedHints = [] } = usePurchasedHints(attemptId);
+  const { mutate: purchaseHint, isPending: isPurchasing } = usePurchaseHint();
 
   const testCases = useMemo<TestCaseItem[]>(
     () => testingAnswers.test_cases ?? [],
@@ -91,6 +101,17 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
       updateTestingAnswer("test_cases", newTestCases);
     },
     [testCases, updateTestingAnswer],
+  );
+
+  const handlePurchaseHint = useCallback(
+    (questionKey: string, hintLevel: number) => {
+      if (!attemptId) return;
+      purchaseHint({
+        attemptId,
+        request: { question_key: questionKey, hint_level: hintLevel },
+      });
+    },
+    [attemptId, purchaseHint],
   );
 
   if (!testingPart) return null;
@@ -144,17 +165,35 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
 
         {/* Question */}
         {testingPart.question && (
-          <div className="overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
-            <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-800">
-              <Lightbulb className="size-4" />
-              Câu hỏi
-            </h3>
-            <p className="text-sm text-amber-700">{testingPart.question}</p>
-            <div className="mt-3">
-              <span className="rounded-full bg-amber-200/50 px-2.5 py-1 text-xs font-medium text-amber-800">
-                Điểm tối đa: {testingPart.max_points ?? 50}
-              </span>
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                  <Lightbulb className="size-4" />
+                  Câu hỏi
+                </h3>
+                {hintCatalog?.["testing.question"] && (
+                  <HintButton
+                    questionKey="testing.question"
+                    hints={hintCatalog["testing.question"]}
+                    onPurchase={(level) =>
+                      handlePurchaseHint("testing.question", level)
+                    }
+                    isPurchasing={isPurchasing}
+                  />
+                )}
+              </div>
+              <p className="text-sm text-amber-700">{testingPart.question}</p>
+              <div className="mt-3">
+                <span className="rounded-full bg-amber-200/50 px-2.5 py-1 text-xs font-medium text-amber-800">
+                  Điểm tối đa: {testingPart.max_points ?? 50}
+                </span>
+              </div>
             </div>
+            <HintPanel
+              questionKey="testing.question"
+              purchasedHints={purchasedHints}
+            />
           </div>
         )}
 

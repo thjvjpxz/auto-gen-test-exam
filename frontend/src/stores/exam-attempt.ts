@@ -23,6 +23,7 @@ const VIOLATION_THRESHOLDS = {
 
 interface ExamAttemptState {
   attemptId: number | null;
+  examId: number | null;
   examData: ExamData | null;
   startedAt: string | null;
   duration: number;
@@ -37,6 +38,7 @@ interface ExamAttemptState {
 
   initAttempt: (data: {
     attemptId: number;
+    examId: number;
     examData: ExamData;
     startedAt: string;
     duration: number;
@@ -56,6 +58,7 @@ interface ExamAttemptState {
 
 const initialState = {
   attemptId: null,
+  examId: null,
   examData: null,
   startedAt: null,
   duration: 0,
@@ -90,6 +93,7 @@ export const useExamAttemptStore = create<ExamAttemptState>((set) => ({
 
   initAttempt: ({
     attemptId,
+    examId,
     examData,
     startedAt,
     duration,
@@ -97,6 +101,7 @@ export const useExamAttemptStore = create<ExamAttemptState>((set) => ({
   }) =>
     set({
       attemptId,
+      examId,
       examData,
       startedAt,
       duration,

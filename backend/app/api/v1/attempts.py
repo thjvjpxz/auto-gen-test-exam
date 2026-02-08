@@ -25,6 +25,7 @@ from app.schemas.attempt import (
 )
 from app.schemas.exam import ExamDataOut
 from app.schemas.grading import AttemptResultOut, GradingResult, SubmittedAnswers
+from app.services.coin_reward_service import CoinRewardService
 from app.services.grading_service import GradingService
 
 router = APIRouter(tags=["attempts"])
@@ -447,6 +448,11 @@ async def submit_exam_attempt(
     await db.commit()
     await db.refresh(attempt)
 
+    coin_reward_service = CoinRewardService(db)
+    reward_data = await coin_reward_service.grant_reward(attempt.id)
+    
+    await db.commit()
+
     violation_count = attempt.get_total_violation_count()
 
     return AttemptResultOut(
@@ -469,6 +475,9 @@ async def submit_exam_attempt(
             sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
             testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
         ),
+        coin_reward=reward_data.get("coin_reward"),
+        coin_balance_after=reward_data.get("coin_balance_after"),
+        reward_breakdown=reward_data.get("reward_breakdown"),
     )
 
 
@@ -539,6 +548,38 @@ async def get_attempt_result(
 
     violation_count = attempt.get_total_violation_count()
 
+
+    coin_reward = None
+    coin_balance_after = None
+    reward_breakdown = None
+    
+    if attempt.status == AttemptStatus.GRADED:
+        from app.models.coin_transaction import CoinTransaction, TransactionType
+        from app.models.wallet import UserWallet
+        
+        coin_tx_stmt = (
+            select(CoinTransaction)
+            .filter_by(
+                user_id=attempt.user_id,
+                attempt_id=attempt.id,
+                type=TransactionType.REWARD,
+            )
+            .order_by(CoinTransaction.created_at.desc())
+            .limit(1)
+        )
+        coin_tx_result = await db.execute(coin_tx_stmt)
+        coin_transaction = coin_tx_result.scalar_one_or_none()
+        
+        if coin_transaction:
+            coin_reward = coin_transaction.amount
+            reward_breakdown = coin_transaction.meta_json.get("breakdown")
+            
+            wallet_stmt = select(UserWallet).filter_by(user_id=attempt.user_id)
+            wallet_result = await db.execute(wallet_stmt)
+            wallet = wallet_result.scalar_one_or_none()
+            if wallet:
+                coin_balance_after = wallet.coin_balance
+
     return AttemptResultOut(
         attempt_id=attempt.id,
         exam_id=exam.id,
@@ -559,6 +600,9 @@ async def get_attempt_result(
             sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
             testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
         ),
+        coin_reward=coin_reward,
+        coin_balance_after=coin_balance_after,
+        reward_breakdown=reward_breakdown,
     )
 
 

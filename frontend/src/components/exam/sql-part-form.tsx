@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Database, Code2, HelpCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
+import { useHintCatalog, usePurchasedHints } from "@/hooks/use-hint-catalog";
+import { usePurchaseHint } from "@/hooks/use-purchase-hint";
+import { HintButton } from "./hint-button";
+import { HintPanel } from "./hint-panel";
 import type { ExamData } from "@/types";
 
 const MermaidRenderer = dynamic(
@@ -34,8 +38,14 @@ interface SqlPartFormProps {
 export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
   const updateSqlAnswer = useExamAttemptStore((s) => s.updateSqlAnswer);
   const answers = useExamAttemptStore((s) => s.answers);
+  const attemptId = useExamAttemptStore((s) => s.attemptId);
+  const examId = useExamAttemptStore((s) => s.examId);
 
   const sqlAnswers = useMemo(() => answers.sql_part ?? {}, [answers.sql_part]);
+
+  const { data: hintCatalog } = useHintCatalog(examId);
+  const { data: purchasedHints = [] } = usePurchasedHints(attemptId);
+  const { mutate: purchaseHint, isPending: isPurchasing } = usePurchaseHint();
 
   const erdDiagram = sqlPart?.mermaid_code ?? sqlPart?.erd_diagram;
   const question1 = sqlPart?.questions?.[0] ?? sqlPart?.question_1;
@@ -46,6 +56,17 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
   const handleChange = (key: string, value: string) => {
     updateSqlAnswer(key, value);
   };
+
+  const handlePurchaseHint = useCallback(
+    (questionKey: string, hintLevel: number) => {
+      if (!attemptId) return;
+      purchaseHint({
+        attemptId,
+        request: { question_key: questionKey, hint_level: hintLevel },
+      });
+    },
+    [attemptId, purchaseHint],
+  );
 
   return (
     <Card className="overflow-hidden border-2 transition-shadow duration-300 hover:shadow-md">
@@ -95,9 +116,21 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
                 1
               </span>
               <div className="flex-1">
-                <Label htmlFor="sql_q1" className="text-base font-medium">
-                  {question1}
-                </Label>
+                <div className="flex items-start justify-between gap-2">
+                  <Label htmlFor="sql_q1" className="text-base font-medium">
+                    {question1}
+                  </Label>
+                  {hintCatalog?.["sql.question_1"] && (
+                    <HintButton
+                      questionKey="sql.question_1"
+                      hints={hintCatalog["sql.question_1"]}
+                      onPurchase={(level) =>
+                        handlePurchaseHint("sql.question_1", level)
+                      }
+                      isPurchasing={isPurchasing}
+                    />
+                  )}
+                </div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     Điểm tối đa: {sqlPart.question_1_points ?? 25}
@@ -105,6 +138,10 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
                 </div>
               </div>
             </div>
+            <HintPanel
+              questionKey="sql.question_1"
+              purchasedHints={purchasedHints}
+            />
             <div className="group relative">
               <Code2 className="absolute left-3 top-3 size-4 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
               <Textarea
@@ -128,9 +165,21 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
                 2
               </span>
               <div className="flex-1">
-                <Label htmlFor="sql_q2" className="text-base font-medium">
-                  {question2}
-                </Label>
+                <div className="flex items-start justify-between gap-2">
+                  <Label htmlFor="sql_q2" className="text-base font-medium">
+                    {question2}
+                  </Label>
+                  {hintCatalog?.["sql.question_2"] && (
+                    <HintButton
+                      questionKey="sql.question_2"
+                      hints={hintCatalog["sql.question_2"]}
+                      onPurchase={(level) =>
+                        handlePurchaseHint("sql.question_2", level)
+                      }
+                      isPurchasing={isPurchasing}
+                    />
+                  )}
+                </div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     Điểm tối đa: {sqlPart.question_2_points ?? 25}
@@ -138,6 +187,10 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
                 </div>
               </div>
             </div>
+            <HintPanel
+              questionKey="sql.question_2"
+              purchasedHints={purchasedHints}
+            />
             <div className="group relative">
               <Code2 className="absolute left-3 top-3 size-4 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
               <Textarea

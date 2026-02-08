@@ -131,3 +131,7 @@ class AttemptResultOut(BaseModel):
         default=None,
         description="User's submitted answers for review",
     )
+    
+    coin_reward: int | None = Field(default=None, description="Coins earned from this attempt")
+    coin_balance_after: int | None = Field(default=None, description="Coin balance after reward")
+    reward_breakdown: dict | None = Field(default=None, description="Breakdown of coin reward calculation")
