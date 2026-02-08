@@ -33,7 +33,6 @@ interface HintButtonProps {
  * Shows one hint level at a time with clear visual progression.
  */
 export function HintButton({
-  questionKey,
   hints,
   onPurchase,
   isPurchasing = false,

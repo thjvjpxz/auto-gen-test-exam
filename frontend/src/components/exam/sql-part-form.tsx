@@ -51,12 +51,6 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
   const question1 = sqlPart?.questions?.[0] ?? sqlPart?.question_1;
   const question2 = sqlPart?.questions?.[1] ?? sqlPart?.question_2;
 
-  if (!sqlPart) return null;
-
-  const handleChange = (key: string, value: string) => {
-    updateSqlAnswer(key, value);
-  };
-
   const handlePurchaseHint = useCallback(
     (questionKey: string, hintLevel: number) => {
       if (!attemptId) return;
@@ -67,6 +61,12 @@ export function SqlPartForm({ sqlPart }: SqlPartFormProps) {
     },
     [attemptId, purchaseHint],
   );
+
+  if (!sqlPart) return null;
+
+  const handleChange = (key: string, value: string) => {
+    updateSqlAnswer(key, value);
+  };
 
   return (
     <Card className="overflow-hidden border-2 transition-shadow duration-300 hover:shadow-md">

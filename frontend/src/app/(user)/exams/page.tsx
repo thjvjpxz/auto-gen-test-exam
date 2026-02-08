@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   FileText,
   Clock,
@@ -14,6 +15,8 @@ import {
   XCircle,
   Eye,
   RotateCcw,
+  Coins,
+  X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -40,6 +43,18 @@ import {
 export default function ExamsPage() {
   const router = useRouter();
   const { data: examsData, isLoading, error } = useExams();
+  const [showCoinInfo, setShowCoinInfo] = useState(() => {
+    if (typeof window !== "undefined") {
+      const dismissed = localStorage.getItem("coin-info-dismissed");
+      return dismissed !== "true";
+    }
+    return true;
+  });
+
+  const handleDismissCoinInfo = () => {
+    setShowCoinInfo(false);
+    localStorage.setItem("coin-info-dismissed", "true");
+  };
 
   const publishedExams =
     examsData?.items?.filter((exam) => exam.is_published) ?? [];
@@ -97,6 +112,42 @@ export default function ExamsPage() {
           </div>
         </div>
       </motion.div>
+
+      {showCoinInfo && (
+        <motion.div
+          variants={springItem}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+        >
+          <Card className="relative overflow-hidden border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+            <div className="h-1 bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500" />
+            <CardContent className="pt-4">
+              <button
+                onClick={handleDismissCoinInfo}
+                className="absolute right-3 top-3 rounded-md p-1 transition-colors hover:bg-amber-100"
+                aria-label="Đóng"
+              >
+                <X className="size-4 text-amber-600" />
+              </button>
+              <div className="flex items-start gap-4">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                  <Coins className="size-6 text-amber-600" />
+                </div>
+                <div className="flex-1 pr-8">
+                  <h3 className="font-semibold text-amber-900">
+                    💡 Mẹo: Hệ thống Coin
+                  </h3>
+                  <p className="mt-1 text-sm text-amber-800">
+                    Làm bài đạt điểm cao để kiếm coin, sau đó dùng coin để mua
+                    gợi ý trong các bài thi tiếp theo!
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

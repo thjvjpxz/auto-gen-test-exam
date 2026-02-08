@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth";
 import { useLogout } from "@/hooks/auth";
+import { CoinBadge } from "@/components/progression/coin-badge";
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -78,6 +79,8 @@ export default function UserLayout({ children }: UserLayoutProps) {
                 <span className="hidden sm:inline">Bài thi</span>
               </Button>
             </Link>
+
+            <CoinBadge variant="compact" />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -21,6 +21,7 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { useLogout } from "@/hooks/auth";
 import { fadeInDown } from "@/lib/motion";
+import { CoinBadge } from "@/components/progression/coin-badge";
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
@@ -69,6 +70,8 @@ export function AdminHeader({ onMenuClick, showMenuButton }: AdminHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <CoinBadge variant="compact" />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
