@@ -131,6 +131,7 @@ class TaskManager:
                     exam_data_json={
                         "sql_part": exam_data["sql_part"],
                         "testing_part": exam_data["testing_part"],
+                        "hints_catalog": exam_data["hints_catalog"],
                     },
                     ai_generated=True,
                     gemini_model=generator.model_name,

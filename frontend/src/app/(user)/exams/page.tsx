@@ -83,9 +83,20 @@ export default function ExamsPage() {
       onSuccess: () => {
         router.push(`/exams/${examId}/take`);
       },
-      onError: (error: any) => {
-        if (error.response?.status === 409) {
-          const conflictDetail = error.response?.data?.detail;
+      onError: (error: unknown) => {
+        if (
+          error &&
+          typeof error === "object" &&
+          "response" in error &&
+          error.response &&
+          typeof error.response === "object" &&
+          "status" in error.response &&
+          error.response.status === 409
+        ) {
+          const response = error.response as {
+            data?: { detail?: unknown };
+          };
+          const conflictDetail = response.data?.detail;
           if (conflictDetail && typeof conflictDetail === "object") {
             setConflictData(conflictDetail as ExamConflictResponse);
             setShowConflictDialog(true);

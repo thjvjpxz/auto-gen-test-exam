@@ -14,6 +14,7 @@ import {
   Trash2,
   Calendar,
   Sparkles,
+  Lightbulb,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
 import { MermaidRenderer } from "@/components/exam/mermaid-renderer";
 import { ExamSettingsEditor } from "@/components/admin/exam-settings-editor";
 import { ExamBasicInfoEditor } from "@/components/admin/exam-basic-info-editor";
+import { HintCatalogPreview } from "@/components/admin/hint-catalog-preview";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import type { ExamType } from "@/types";
@@ -276,6 +278,15 @@ export default function ExamDetailPage({ params }: PageProps) {
                 Phần Testing
               </TabsTrigger>
             )}
+            {exam.exam_data?.hints_catalog && (
+              <TabsTrigger
+                value="hints"
+                className="cursor-pointer data-[state=active]:bg-background"
+              >
+                <Lightbulb className="mr-2 size-4" />
+                Gợi ý (Hints)
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Overview Tab */}
@@ -420,6 +431,13 @@ export default function ExamDetailPage({ params }: PageProps) {
                   </p>
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {/* Hints Tab */}
+          {exam.exam_data?.hints_catalog && (
+            <TabsContent value="hints" className="space-y-6">
+              <HintCatalogPreview hintsCatalog={exam.exam_data.hints_catalog} />
             </TabsContent>
           )}
         </Tabs>

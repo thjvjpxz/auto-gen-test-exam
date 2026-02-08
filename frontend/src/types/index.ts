@@ -244,6 +244,14 @@ export interface ExamData {
   title?: string;
   sql_part?: ExamSQLPart;
   testing_part?: ExamTestingPart;
+  hints_catalog?: {
+    [key: string]: Array<{
+      level: number;
+      cost: number;
+      preview: string;
+      content: string;
+    }>;
+  };
 }
 
 export interface ExamSettings {

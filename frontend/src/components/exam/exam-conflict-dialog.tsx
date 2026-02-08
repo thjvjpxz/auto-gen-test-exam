@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { AlertTriangle, Clock, FileText, Play, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -44,8 +43,6 @@ export function ExamConflictDialog({
   onForceSubmit,
   isSubmitting = false,
 }: ExamConflictDialogProps) {
-  const router = useRouter();
-
   if (!conflictData) return null;
 
   const formatTimeRemaining = (seconds: number): string => {
