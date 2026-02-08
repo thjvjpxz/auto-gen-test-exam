@@ -180,6 +180,47 @@ async def start_exam_attempt(
                 detail=f"Bạn đã sử dụng hết {max_attempts} lượt làm bài cho đề thi này",
             )
 
+    global_progress_stmt = (
+        select(ExamAttempt, Exam)
+        .join(Exam, ExamAttempt.exam_id == Exam.id)
+        .where(ExamAttempt.user_id == current_user.id)
+        .where(ExamAttempt.status == AttemptStatus.IN_PROGRESS)
+        .order_by(ExamAttempt.started_at.desc())
+    )
+    global_progress_result = await db.execute(global_progress_stmt)
+    global_attempt_row = global_progress_result.first()
+
+    if global_attempt_row:
+        global_attempt, global_exam = global_attempt_row
+        
+        if global_attempt.exam_id != exam_id:
+            started_at = global_attempt.started_at
+            if started_at.tzinfo is None:
+                started_at = started_at.replace(tzinfo=timezone.utc)
+            
+            now = datetime.now(timezone.utc)
+            elapsed_seconds = int((now - started_at).total_seconds())
+            duration_seconds = global_exam.duration * 60
+            time_remaining = max(0, duration_seconds - elapsed_seconds)
+            
+            from app.schemas.attempt import ExamConflictResponse
+            
+            conflict_data = ExamConflictResponse(
+                message=f"Bạn đang làm bài thi '{global_exam.title}'. Vui lòng hoàn thành hoặc hủy bỏ trước khi bắt đầu bài thi mới.",
+                existing_attempt_id=global_attempt.id,
+                existing_exam_id=global_exam.id,
+                existing_exam_title=global_exam.title,
+                started_at=started_at,
+                duration=global_exam.duration,
+                time_remaining_seconds=time_remaining,
+            )
+            
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=conflict_data.model_dump(),
+            )
+
+
     # Check for existing in-progress attempt
     existing_stmt = (
         select(ExamAttempt)

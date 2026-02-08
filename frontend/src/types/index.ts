@@ -359,6 +359,17 @@ export interface AttemptStartResponse {
   exam_data: ExamData;
 }
 
+/** Response when user tries to start exam while having active attempt on another exam (409 Conflict) */
+export interface ExamConflictResponse {
+  message: string;
+  existing_attempt_id: number;
+  existing_exam_id: number;
+  existing_exam_title: string;
+  started_at: string;
+  duration: number;
+  time_remaining_seconds: number;
+}
+
 /** Response from PATCH /attempts/{attempt_id}/save */
 export interface AttemptSaveResponse {
   id: number;

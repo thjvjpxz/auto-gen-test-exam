@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Coins,
   X,
+  Lightbulb,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExams } from "@/hooks/exam";
-import type { ExamListItem } from "@/types";
+import { useStartExam, useSubmitExam } from "@/hooks/attempt";
+import { ExamConflictDialog } from "@/components/exam/exam-conflict-dialog";
+import type {
+  ExamListItem,
+  ExamConflictResponse,
+  AnswersPayload,
+} from "@/types";
+import { toast } from "sonner";
 import {
   staggerContainer,
   springItem,
@@ -51,6 +59,15 @@ export default function ExamsPage() {
     return true;
   });
 
+  const [conflictData, setConflictData] = useState<ExamConflictResponse | null>(
+    null,
+  );
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [pendingExamId, setPendingExamId] = useState<number | null>(null);
+
+  const startExam = useStartExam();
+  const submitExam = useSubmitExam();
+
   const handleDismissCoinInfo = () => {
     setShowCoinInfo(false);
     localStorage.setItem("coin-info-dismissed", "true");
@@ -60,7 +77,72 @@ export default function ExamsPage() {
     examsData?.items?.filter((exam) => exam.is_published) ?? [];
 
   const handleStartExam = (examId: number) => {
-    router.push(`/exams/${examId}/take`);
+    setPendingExamId(examId);
+
+    startExam.mutate(examId, {
+      onSuccess: () => {
+        router.push(`/exams/${examId}/take`);
+      },
+      onError: (error: any) => {
+        if (error.response?.status === 409) {
+          const conflictDetail = error.response?.data?.detail;
+          if (conflictDetail && typeof conflictDetail === "object") {
+            setConflictData(conflictDetail as ExamConflictResponse);
+            setShowConflictDialog(true);
+          }
+        }
+      },
+    });
+  };
+
+  const handleContinueExisting = () => {
+    if (conflictData) {
+      setShowConflictDialog(false);
+      router.push(`/exams/${conflictData.existing_exam_id}/take`);
+      setConflictData(null);
+      setPendingExamId(null);
+    }
+  };
+
+  const handleForceSubmit = () => {
+    if (!conflictData) return;
+
+    const attemptId = conflictData.existing_attempt_id;
+    const localDraftKey = `exam_draft_${attemptId}`;
+    const savedDraft = localStorage.getItem(localDraftKey);
+
+    let answers: AnswersPayload = {
+      sql_part: null,
+      testing_part: null,
+    };
+
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        answers = parsed.answers || answers;
+      } catch {
+        console.warn("Failed to parse saved draft");
+      }
+    }
+
+    submitExam.mutate(
+      { attemptId, answers },
+      {
+        onSuccess: () => {
+          localStorage.removeItem(localDraftKey);
+          setShowConflictDialog(false);
+          setConflictData(null);
+
+          if (pendingExamId) {
+            router.push(`/exams/${pendingExamId}/take`);
+          }
+        },
+        onError: (error) => {
+          console.error("Force submit failed:", error);
+          toast.error("Không thể nộp bài cũ. Vui lòng thử lại.");
+        },
+      },
+    );
   };
 
   const getExamTypeBadge = (type: string) => {
@@ -135,8 +217,9 @@ export default function ExamsPage() {
                   <Coins className="size-6 text-amber-600" />
                 </div>
                 <div className="flex-1 pr-8">
-                  <h3 className="font-semibold text-amber-900">
-                    💡 Mẹo: Hệ thống Coin
+                  <h3 className="flex items-center gap-2 font-semibold text-amber-900">
+                    <Lightbulb className="size-4" />
+                    Mẹo: Hệ thống Coin
                   </h3>
                   <p className="mt-1 text-sm text-amber-800">
                     Làm bài đạt điểm cao để kiếm coin, sau đó dùng coin để mua
@@ -203,6 +286,15 @@ export default function ExamsPage() {
           ))}
         </motion.div>
       )}
+
+      <ExamConflictDialog
+        open={showConflictDialog}
+        onOpenChange={setShowConflictDialog}
+        conflictData={conflictData}
+        onContinueExisting={handleContinueExisting}
+        onForceSubmit={handleForceSubmit}
+        isSubmitting={submitExam.isPending}
+      />
     </div>
   );
 }
