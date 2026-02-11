@@ -18,6 +18,7 @@ import {
   Coins,
   X,
   Lightbulb,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -326,6 +327,7 @@ function ExamCard({ exam, getExamTypeBadge, onStart }: ExamCardProps) {
     exam.last_attempt_status === "submitted" ||
     exam.last_attempt_status === "graded";
   const isInProgress = exam.last_attempt_status === "in_progress";
+  const isSubmittedPending = exam.last_attempt_status === "submitted";
 
   const score = exam.last_attempt_score ?? 0;
   const passed = isCompleted && score >= exam.passing_score;
@@ -451,19 +453,33 @@ function ExamCard({ exam, getExamTypeBadge, onStart }: ExamCardProps) {
                 </>
               )}
             </div>
-            {isCompleted &&
+            {isSubmittedPending ? (
+              <div className="flex items-center gap-1.5 text-orange-600">
+                <Loader2 className="size-4 animate-spin" />
+                <span className="font-medium">Đang chờ chấm điểm</span>
+              </div>
+            ) : (
+              isCompleted &&
               exam.recent_attempt_score != null &&
               exam.recent_attempt_score !== exam.last_attempt_score && (
                 <p className="text-xs text-muted-foreground/70">
                   Lần thử gần nhất: {Math.round(exam.recent_attempt_score)}% (
                   {formatRelativeTime(exam.recent_attempt_at)})
                 </p>
-              )}
+              )
+            )}
           </div>
         </CardContent>
 
         <CardFooter className="gap-2 pt-0">
-          {isCompleted ? (
+          {isSubmittedPending ? (
+            <div className="flex w-full items-center justify-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-4 py-3 text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400">
+              <Loader2 className="size-4 animate-spin" />
+              <span className="font-medium text-sm">
+                Bài đã nộp thành công. Hệ thống đang xử lý kết quả...
+              </span>
+            </div>
+          ) : isCompleted ? (
             <>
               <Button
                 onClick={handleViewResult}

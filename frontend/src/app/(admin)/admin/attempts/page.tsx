@@ -11,6 +11,8 @@ import {
   ArrowRight,
   User,
   FileText,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +34,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useAdminAttempts } from "@/hooks/admin";
+import {
+  useAdminAttempts,
+  useRegradeAttempt,
+  useRegradeBatch,
+} from "@/hooks/admin";
 import { fadeInDown } from "@/lib/motion";
 
 export default function AdminAttemptsPage() {
@@ -45,6 +51,9 @@ export default function AdminAttemptsPage() {
     limit,
     status: statusFilter !== "all" ? statusFilter : undefined,
   });
+
+  const regradeMutation = useRegradeAttempt();
+  const regradeBatchMutation = useRegradeBatch();
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -76,6 +85,14 @@ export default function AdminAttemptsPage() {
         <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
           <Clock className="mr-1 size-3" />
           Đang làm
+        </Badge>
+      );
+    }
+    if (status === "submitted") {
+      return (
+        <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">
+          <Loader2 className="mr-1 size-3 animate-spin" />
+          Chờ chấm
         </Badge>
       );
     }
@@ -119,8 +136,26 @@ export default function AdminAttemptsPage() {
                 <SelectItem value="all">Tất cả</SelectItem>
                 <SelectItem value="graded">Đã chấm</SelectItem>
                 <SelectItem value="in_progress">Đang làm</SelectItem>
+                <SelectItem value="submitted">Chờ chấm</SelectItem>
               </SelectContent>
             </Select>
+            {statusFilter === "submitted" && data && data.total > 0 && (
+              <Button
+                onClick={() =>
+                  regradeBatchMutation.mutate({ status_filter: "submitted" })
+                }
+                disabled={regradeBatchMutation.isPending}
+                variant="outline"
+                size="sm"
+              >
+                {regradeBatchMutation.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 size-4" />
+                )}
+                Chấm lại tất cả
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -243,7 +278,22 @@ export default function AdminAttemptsPage() {
                       {formatDate(attempt.submitted_at || attempt.started_at)}
                     </TableCell>
                     <TableCell>
-                      {attempt.status === "graded" ? (
+                      {attempt.status === "submitted" ? (
+                        <Button
+                          onClick={() => regradeMutation.mutate(attempt.id)}
+                          disabled={regradeMutation.isPending}
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1"
+                        >
+                          {regradeMutation.isPending ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="size-4" />
+                          )}
+                          Chấm lại
+                        </Button>
+                      ) : attempt.status === "graded" ? (
                         <Button
                           variant="ghost"
                           size="icon"

@@ -12,8 +12,11 @@ from app.models.user import User, UserRole
 from app.schemas.admin import (
     AdminAttemptListOut,
     AdminAttemptListResponse,
+    AdminBatchRegradeRequest,
+    AdminBatchRegradeResponse,
     AdminCoinAdjustmentRequest,
     AdminCoinAdjustmentResponse,
+    AdminRegradeResponse,
     AdminStatsOut,
     UserDetailOut,
     UserExamHistoryItem,
@@ -426,3 +429,95 @@ async def adjust_user_coins(
         adjusted_at=datetime.now(timezone.utc),
     )
 
+
+@router.post("/attempts/{attempt_id}/regrade", response_model=AdminRegradeResponse)
+async def regrade_attempt(
+    attempt_id: Annotated[int, Path(description="Attempt ID to re-grade")],
+    db: DbSessionDep,
+    current_user: AdminUser,
+) -> AdminRegradeResponse:
+    """Re-grade a single attempt (admin only).
+
+    Re-grades attempts with status SUBMITTED or GRADED.
+    Grants coin reward if not already rewarded.
+
+    Args:
+        attempt_id: ID of attempt to re-grade.
+        db: Database session.
+        current_user: Current admin user.
+
+    Returns:
+        AdminRegradeResponse with result.
+
+    Raises:
+        HTTPException: If attempt not found or cannot be re-graded.
+    """
+    from app.api.v1.admin_regrade_helper import regrade_single_attempt
+    
+    return await regrade_single_attempt(db, attempt_id)
+
+
+@router.post("/attempts/regrade-batch", response_model=AdminBatchRegradeResponse)
+async def regrade_batch(
+    request: AdminBatchRegradeRequest,
+    db: DbSessionDep,
+    current_user: AdminUser,
+) -> AdminBatchRegradeResponse:
+    """Re-grade multiple attempts in batch (admin only).
+
+    Processes attempts sequentially to avoid Gemini API rate limits.
+
+    Args:
+        request: Batch re-grade request with attempt IDs or status filter.
+        db: Database session.
+        current_user: Current admin user.
+
+    Returns:
+        AdminBatchRegradeResponse with success/failed counts and details.
+    """
+    from app.api.v1.admin_regrade_helper import regrade_single_attempt
+    
+    if request.attempt_ids:
+        attempt_ids = request.attempt_ids
+    elif request.status_filter:
+        result = await db.execute(
+            select(ExamAttempt.id).where(ExamAttempt.status == request.status_filter)
+        )
+        attempt_ids = [row[0] for row in result.all()]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must provide either attempt_ids or status_filter",
+        )
+
+    results: list[AdminRegradeResponse] = []
+    success_count = 0
+    failed_count = 0
+
+    for attempt_id in attempt_ids:
+        try:
+            result = await regrade_single_attempt(db, attempt_id)
+            results.append(result)
+            
+            if result.status == AttemptStatus.GRADED:
+                success_count += 1
+            else:
+                failed_count += 1
+                
+        except Exception as e:
+            logger.error(f"Failed to re-grade attempt {attempt_id}: {e}")
+            results.append(
+                AdminRegradeResponse(
+                    attempt_id=attempt_id,
+                    status=AttemptStatus.SUBMITTED,
+                    score=None,
+                    message=f"Error: {str(e)}",
+                )
+            )
+            failed_count += 1
+
+    return AdminBatchRegradeResponse(
+        success_count=success_count,
+        failed_count=failed_count,
+        results=results,
+    )

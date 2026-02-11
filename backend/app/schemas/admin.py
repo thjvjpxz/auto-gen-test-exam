@@ -150,3 +150,32 @@ class AdminCoinAdjustmentResponse(BaseModel):
     adjusted_by_admin_name: str
     adjusted_at: datetime
 
+
+class AdminRegradeResponse(BaseModel):
+    """Response schema for single attempt re-grade."""
+
+    attempt_id: int
+    status: AttemptStatus
+    score: float | None
+    message: str
+
+
+class AdminBatchRegradeRequest(BaseModel):
+    """Request schema for batch re-grade."""
+
+    attempt_ids: list[int] | None = Field(
+        default=None,
+        description="Specific attempt IDs to re-grade. If None, uses status_filter.",
+    )
+    status_filter: AttemptStatus | None = Field(
+        default=AttemptStatus.SUBMITTED,
+        description="Re-grade all attempts with this status",
+    )
+
+
+class AdminBatchRegradeResponse(BaseModel):
+    """Response schema for batch re-grade."""
+
+    success_count: int
+    failed_count: int
+    results: list[AdminRegradeResponse]

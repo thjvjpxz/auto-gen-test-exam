@@ -473,53 +473,82 @@ async def submit_exam_attempt(
             answers=request.answers,
             passing_score=exam.passing_score,
         )
+        
+        attempt.score = grading_result.total_score
+        attempt.max_score = grading_result.max_score
+        attempt.percentage = grading_result.percentage
+        attempt.ai_grading_json = grading_result.model_dump()
+        attempt.status = AttemptStatus.GRADED
+
+        await db.commit()
+        await db.refresh(attempt)
+
+        coin_reward_service = CoinRewardService(db)
+        reward_data = await coin_reward_service.grant_reward(attempt.id)
+        
+        await db.commit()
+
+        violation_count = attempt.get_total_violation_count()
+
+        return AttemptResultOut(
+            attempt_id=attempt.id,
+            exam_id=exam.id,
+            exam_title=exam.title,
+            user_id=attempt.user_id,
+            started_at=attempt.started_at.isoformat(),
+            submitted_at=attempt.submitted_at.isoformat() if attempt.submitted_at else None,
+            time_taken=attempt.time_taken,
+            score=attempt.score,
+            max_score=attempt.max_score,
+            percentage=attempt.percentage or 0,
+            passed=grading_result.passed,
+            trust_score=attempt.trust_score,
+            violation_count=violation_count,
+            flagged_for_review=attempt.trust_score < 50,
+            grading=grading_result,
+            submitted_answers=SubmittedAnswers(
+                sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
+                testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
+            ),
+            coin_reward=reward_data.get("coin_reward"),
+            coin_balance_after=reward_data.get("coin_balance_after"),
+            reward_breakdown=reward_data.get("reward_breakdown"),
+        )
+        
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi chấm điểm: {str(e)}",
-        ) from e
+        logger.error(f"Grading failed after retries: {e}")
+        
+        attempt.status = AttemptStatus.SUBMITTED
+        await db.commit()
+        await db.refresh(attempt)
+        
+        violation_count = attempt.get_total_violation_count()
+        
+        return AttemptResultOut(
+            attempt_id=attempt.id,
+            exam_id=exam.id,
+            exam_title=exam.title,
+            user_id=attempt.user_id,
+            started_at=attempt.started_at.isoformat(),
+            submitted_at=attempt.submitted_at.isoformat() if attempt.submitted_at else None,
+            time_taken=attempt.time_taken,
+            score=0.0,
+            max_score=100.0,
+            percentage=0.0,
+            passed=False,
+            trust_score=attempt.trust_score,
+            violation_count=violation_count,
+            flagged_for_review=attempt.trust_score < 50,
+            grading=None,
+            submitted_answers=SubmittedAnswers(
+                sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
+                testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
+            ),
+            coin_reward=None,
+            coin_balance_after=None,
+            reward_breakdown=None,
+        )
 
-    # Update attempt with grading results
-    attempt.score = grading_result.total_score
-    attempt.max_score = grading_result.max_score
-    attempt.percentage = grading_result.percentage
-    attempt.ai_grading_json = grading_result.model_dump()
-    attempt.status = AttemptStatus.GRADED
-
-    await db.commit()
-    await db.refresh(attempt)
-
-    coin_reward_service = CoinRewardService(db)
-    reward_data = await coin_reward_service.grant_reward(attempt.id)
-    
-    await db.commit()
-
-    violation_count = attempt.get_total_violation_count()
-
-    return AttemptResultOut(
-        attempt_id=attempt.id,
-        exam_id=exam.id,
-        exam_title=exam.title,
-        user_id=attempt.user_id,
-        started_at=attempt.started_at.isoformat(),
-        submitted_at=attempt.submitted_at.isoformat() if attempt.submitted_at else None,
-        time_taken=attempt.time_taken,
-        score=attempt.score,
-        max_score=attempt.max_score,
-        percentage=attempt.percentage or 0,
-        passed=grading_result.passed,
-        trust_score=attempt.trust_score,
-        violation_count=violation_count,
-        flagged_for_review=attempt.trust_score < 50,
-        grading=grading_result,
-        submitted_answers=SubmittedAnswers(
-            sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
-            testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
-        ),
-        coin_reward=reward_data.get("coin_reward"),
-        coin_balance_after=reward_data.get("coin_balance_after"),
-        reward_breakdown=reward_data.get("reward_breakdown"),
-    )
 
 
 # =============================================================================
