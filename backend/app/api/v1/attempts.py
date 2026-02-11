@@ -1,5 +1,6 @@
 """Exam attempt API endpoints for starting, saving, submitting, and viewing results."""
 
+import logging
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -27,6 +28,8 @@ from app.schemas.exam import ExamDataOut
 from app.schemas.grading import AttemptResultOut, GradingResult, SubmittedAnswers
 from app.services.coin_reward_service import CoinRewardService
 from app.services.grading_service import GradingService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["attempts"])
 

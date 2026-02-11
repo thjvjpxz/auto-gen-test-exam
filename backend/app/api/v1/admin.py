@@ -1,5 +1,6 @@
 """Admin API endpoints for user management, stats, and attempts overview."""
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -24,6 +25,8 @@ from app.schemas.admin import (
     UserListResponse,
     UserUpdateRequest,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 

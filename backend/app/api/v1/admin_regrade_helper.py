@@ -1,7 +1,6 @@
 """Admin re-grade endpoints implementation."""
 
 import logging
-from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
