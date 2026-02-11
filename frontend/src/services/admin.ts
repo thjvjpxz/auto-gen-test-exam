@@ -104,6 +104,24 @@ export interface AdminAttemptListResponse {
   limit: number;
 }
 
+export interface AdminRegradeResponse {
+  attempt_id: number;
+  status: string;
+  score: number | null;
+  message: string;
+}
+
+export interface AdminBatchRegradeRequest {
+  attempt_ids?: number[];
+  status_filter?: string;
+}
+
+export interface AdminBatchRegradeResponse {
+  success_count: number;
+  failed_count: number;
+  results: AdminRegradeResponse[];
+}
+
 export interface UserListParams {
   skip?: number;
   limit?: number;
@@ -195,6 +213,23 @@ export const adminService = {
   ): Promise<AdminCoinAdjustmentResponse> {
     const response = await api.patch<AdminCoinAdjustmentResponse>(
       `${ADMIN_API_BASE}/users/${userId}/coins`,
+      data,
+    );
+    return response.data;
+  },
+
+  async regradeAttempt(attemptId: number): Promise<AdminRegradeResponse> {
+    const response = await api.post<AdminRegradeResponse>(
+      `${ADMIN_API_BASE}/attempts/${attemptId}/regrade`,
+    );
+    return response.data;
+  },
+
+  async regradeBatch(
+    data: AdminBatchRegradeRequest,
+  ): Promise<AdminBatchRegradeResponse> {
+    const response = await api.post<AdminBatchRegradeResponse>(
+      `${ADMIN_API_BASE}/attempts/regrade-batch`,
       data,
     );
     return response.data;

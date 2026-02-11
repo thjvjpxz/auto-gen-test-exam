@@ -9,6 +9,8 @@ import {
   type AdminAttemptListResponse,
   type UserUpdateRequest,
   type AdminCoinAdjustmentRequest,
+  type AdminRegradeResponse,
+  type AdminBatchRegradeRequest,
 } from "@/services/admin";
 
 /**
@@ -106,6 +108,31 @@ export function useAdjustUserCoins() {
     onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+    },
+  });
+}
+
+export function useRegradeAttempt() {
+  const queryClient = useQueryClient();
+
+  return useMutation<AdminRegradeResponse, Error, number>({
+    mutationFn: (attemptId: number) => adminService.regradeAttempt(attemptId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "attempts"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+    },
+  });
+}
+
+export function useRegradeBatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: AdminBatchRegradeRequest) =>
+      adminService.regradeBatch(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "attempts"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
     },
   });

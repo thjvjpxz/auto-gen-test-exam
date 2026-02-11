@@ -7,6 +7,13 @@ from typing import Any
 
 from google import genai
 from google.genai import types
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception,
+    before_sleep_log,
+)
 
 from app.core.config import get_settings
 from app.schemas.attempt import AnswersPayload
@@ -27,6 +34,22 @@ logger = logging.getLogger(__name__)
 
 GRADING_MODEL = "gemini-2.5-flash-lite"
 GRADING_TEMPERATURE = 0.3
+
+
+def _is_retryable_error(exception: Exception) -> bool:
+    """Check if exception is a transient error that should be retried.
+
+    Args:
+        exception: The exception to check.
+
+    Returns:
+        True if error is retryable (503, 429, timeout), False otherwise.
+    """
+    error_str = str(exception).lower()
+    return any(
+        keyword in error_str
+        for keyword in ["503", "unavailable", "429", "resource_exhausted", "timeout"]
+    )
 
 
 class GradingService:
@@ -54,8 +77,19 @@ class GradingService:
         self.client = genai.Client(api_key=settings.gemini_api_key)
         self.model_name = model_name
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=8),
+        retry=retry_if_exception(_is_retryable_error),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
+    )
     async def _call_gemini_api(self, prompt: str) -> dict[str, Any]:
-        """Call Gemini API and parse JSON response.
+        """Call Gemini API and parse JSON response with retry logic.
+
+        Retries up to 3 times with exponential backoff (2s → 4s → 8s)
+        for transient errors (503 UNAVAILABLE, 429 RESOURCE_EXHAUSTED, timeout).
+        Does not retry for client errors (400, 401, 403).
 
         Args:
             prompt: The formatted prompt to send to the model.
@@ -65,7 +99,7 @@ class GradingService:
 
         Raises:
             json.JSONDecodeError: If response is not valid JSON.
-            RuntimeError: If API call fails.
+            RuntimeError: If API call fails after all retries.
         """
         try:
             response = await asyncio.to_thread(
