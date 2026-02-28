@@ -4,10 +4,10 @@ import logging
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, HTTPException, Path, Query, Request, status
 from sqlalchemy import func, select
 
-from app.api.deps import AdminUser, CurrentUser, DbSessionDep, require_admin
+from app.api.deps import AdminUser, CurrentUser, DbSessionDep
 from app.models.attempt import AttemptStatus, ExamAttempt
 from app.models.exam import Exam
 from app.models.user import User, UserRole
