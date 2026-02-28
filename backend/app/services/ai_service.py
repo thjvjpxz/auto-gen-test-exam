@@ -15,7 +15,7 @@ from app.core.config import get_settings
 from app.models.exam import ExamType
 
 # Constants
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 GENERATION_TEMPERATURE = 1.0
 
 MASTER_PROMPT = """
@@ -178,10 +178,36 @@ Mỗi hint phải có:
 
 ---
 
+## MODEL ANSWERS (ĐÁP ÁN MẪU - DÙNG ĐỂ CHẤM ĐIỂM)
+
+Bạn PHẢI sinh đáp án mẫu cho TỪNG câu hỏi. Đáp án mẫu giúp hệ thống chấm điểm so sánh bài làm sinh viên. Yêu cầu:
+
+### SQL Model Answers:
+- Mỗi câu SQL phải có 1 query đúng, chạy được trên ERD đã thiết kế
+- Query phải đúng logic, cú pháp, và tối ưu
+- Nếu có nhiều cách viết đúng, chọn cách phổ biến nhất
+
+### Testing Model Answers:
+- expected_technique: Kỹ thuật kiểm thử chính xác nhất cho bài toán
+- technique_reasoning: Giải thích TẠI SAO kỹ thuật này phù hợp (2-3 câu)
+- equivalence_classes: Danh sách TẤT CẢ lớp tương đương / giá trị biên / trạng thái
+- expected_test_cases: Tối thiểu 8 test cases mẫu HOÀN CHỈNH, tính từ rules_table
+- coverage_requirements: Số lượng tối thiểu mỗi loại test case
+
+**RÀNG BUỘC NHÃN TEST CASE (BẮT BUỘC):**
+- Mỗi test case có type = CHÍNH XÁC 1 trong: "Valid", "Invalid", "Boundary"
+- Số test cases gắn nhãn "Valid" PHẢI >= min_valid_cases
+- Số test cases gắn nhãn "Invalid" PHẢI >= min_invalid_cases
+- Số test cases gắn nhãn "Boundary" PHẢI >= min_boundary_cases
+- Tổng test cases = Valid + Invalid + Boundary >= 8
+- SAU KHI TẠO XONG, hãy ĐẾM LẠI số lượng mỗi nhãn để đảm bảo đủ yêu cầu
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
-  "exam_title": "string - Tiêu đề cụ thể theo chủ đề, ví dụ: Đề thi CSDL & Kiểm thử - Hệ thống Quản lý Gym",
+  "exam_title": "string - Tiêu đề cụ thể theo chủ đề, ví dụ: Hệ thống Quản lý Gym",
   "sql_part": {
     "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh theo cú pháp trên",
     "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
@@ -192,6 +218,34 @@ Mỗi hint phải có:
       {"condition": "string - Điều kiện với toán tử rõ ràng (>=, <, etc.)", "result": "string - Kết quả có giá trị số cụ thể"}
     ],
     "question": "string - Yêu cầu chia thành a), b), c) như hướng dẫn trên"
+  },
+  "model_answers": {
+    "sql_part": {
+      "question_1_answer": "string - Câu SQL hoàn chỉnh, đúng cú pháp, chạy được trên ERD",
+      "question_2_answer": "string - Câu SQL hoàn chỉnh, đúng cú pháp, chạy được trên ERD"
+    },
+    "testing_part": {
+      "expected_technique": "string - EP/BVA/Decision Table/State Transition",
+      "technique_reasoning": "string - Giải thích 2-3 câu tại sao chọn kỹ thuật này",
+      "equivalence_classes": [
+        "string - Lớp tương đương / giá trị biên / trạng thái thứ 1",
+        "string - Lớp tương đương / giá trị biên / trạng thái thứ 2"
+      ],
+      "expected_test_cases": [
+        {
+          "tc_id": "TC01",
+          "description": "string - Mô tả test case",
+          "input": "string - Giá trị input cụ thể",
+          "expected_output": "string - Kết quả TÍNH TOÁN ĐƯỢC từ rules_table",
+          "type": "Valid|Invalid|Boundary"
+        }
+      ],
+      "coverage_requirements": {
+        "min_valid_cases": 4,
+        "min_invalid_cases": 2,
+        "min_boundary_cases": 2
+      }
+    }
   },
   "hints_catalog": {
     "sql.question_1": [
@@ -218,6 +272,9 @@ Mỗi hint phải có:
 - Các con số trong bài Testing PHẢI nhất quán và tính toán được
 - PHẢI có đầy đủ hints cho tất cả câu hỏi (sql.question_1, sql.question_2, testing.question)
 - Hints PHẢI phù hợp với NỘI DUNG CỤ THỂ của đề, KHÔNG copy từ ví dụ mẫu
+- model_answers PHẢI chính xác và nhất quán với đề bài đã sinh
+- SQL model answers PHẢI chạy được trên ERD đã thiết kế
+- Testing expected_test_cases PHẢI có expected_output TÍNH TOÁN CHÍNH XÁC từ rules_table
 """
 
 # SQL-only prompt - generates only SQL part
@@ -297,6 +354,15 @@ Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
 
 ---
 
+## MODEL ANSWERS (ĐÁP ÁN MẪU)
+
+Bạn PHẢI sinh đáp án mẫu cho TỪNG câu hỏi SQL:
+- Mỗi câu SQL phải có 1 query đúng, chạy được trên ERD đã thiết kế
+- Query phải đúng logic, cú pháp, và tối ưu
+- Nếu có nhiều cách viết đúng, chọn cách phổ biến nhất
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
@@ -306,6 +372,13 @@ Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
     "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
   },
   "testing_part": null,
+  "model_answers": {
+    "sql_part": {
+      "question_1_answer": "string - Câu SQL hoàn chỉnh, đúng cú pháp, chạy được trên ERD",
+      "question_2_answer": "string - Câu SQL hoàn chỉnh, đúng cú pháp, chạy được trên ERD"
+    },
+    "testing_part": null
+  },
   "hints_catalog": {
     "sql.question_1": [
       {"level": 1, "cost": 5, "preview": "string", "content": "string"},
@@ -320,7 +393,9 @@ Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
   }
 }
 
-**LƯU Ý:** PHẢI có đầy đủ hints cho tất cả câu hỏi SQL.
+**LƯU Ý:**
+- PHẢI có đầy đủ hints cho tất cả câu hỏi SQL
+- SQL model answers PHẢI chạy được trên ERD đã thiết kế
 """
 
 # Testing-only prompt - generates only Testing part
@@ -377,6 +452,25 @@ Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
 
 ---
 
+## MODEL ANSWERS (ĐÁP ÁN MẪU)
+
+Bạn PHẢI sinh đáp án mẫu cho câu hỏi Testing:
+- expected_technique: Kỹ thuật kiểm thử chính xác nhất cho bài toán
+- technique_reasoning: Giải thích TẠI SAO kỹ thuật này phù hợp (2-3 câu)
+- equivalence_classes: Danh sách TẤT CẢ lớp tương đương / giá trị biên / trạng thái
+- expected_test_cases: Tối thiểu 8 test cases mẫu HOÀN CHỈNH, tính từ rules_table
+- coverage_requirements: Số lượng tối thiểu mỗi loại test case
+
+**RÀNG BUỘC NHÃN TEST CASE (BẮT BUỘC):**
+- Mỗi test case có type = CHÍNH XÁC 1 trong: "Valid", "Invalid", "Boundary"
+- Số test cases gắn nhãn "Valid" PHẢI >= min_valid_cases
+- Số test cases gắn nhãn "Invalid" PHẢI >= min_invalid_cases
+- Số test cases gắn nhãn "Boundary" PHẢI >= min_boundary_cases
+- Tổng test cases = Valid + Invalid + Boundary >= 8
+- SAU KHI TẠO XONG, hãy ĐẾM LẠI số lượng mỗi nhãn để đảm bảo đủ yêu cầu
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
@@ -389,6 +483,30 @@ Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
     ],
     "question": "string - Yêu cầu chia a), b), c)"
   },
+  "model_answers": {
+    "sql_part": null,
+    "testing_part": {
+      "expected_technique": "string - EP/BVA/Decision Table/State Transition",
+      "technique_reasoning": "string - Giải thích 2-3 câu tại sao chọn kỹ thuật này",
+      "equivalence_classes": [
+        "string - Lớp tương đương / giá trị biên / trạng thái"
+      ],
+      "expected_test_cases": [
+        {
+          "tc_id": "TC01",
+          "description": "string - Mô tả test case",
+          "input": "string - Giá trị input cụ thể",
+          "expected_output": "string - Kết quả TÍNH TOÁN ĐƯỢC từ rules_table",
+          "type": "Valid|Invalid|Boundary"
+        }
+      ],
+      "coverage_requirements": {
+        "min_valid_cases": 4,
+        "min_invalid_cases": 2,
+        "min_boundary_cases": 2
+      }
+    }
+  },
   "hints_catalog": {
     "testing.question": [
       {"level": 1, "cost": 5, "preview": "string", "content": "string - PHẢI dùng dữ liệu từ scenario"},
@@ -398,7 +516,9 @@ Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
   }
 }
 
-**LƯU Ý:** PHẢI có hints phù hợp với NỘI DUNG CỤ THỂ của đề, KHÔNG copy từ ví dụ mẫu.
+**LƯU Ý:**
+- PHẢI có hints phù hợp với NỘI DUNG CỤ THỂ của đề, KHÔNG copy từ ví dụ mẫu
+- Testing expected_test_cases PHẢI có expected_output TÍNH TOÁN CHÍNH XÁC từ rules_table
 """
 
 

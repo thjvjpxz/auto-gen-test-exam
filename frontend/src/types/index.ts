@@ -35,128 +35,6 @@ export interface User {
   updatedAt?: string;
 }
 
-export interface SqlQuestion {
-  id: number;
-  question: string;
-  maxScore: number;
-}
-
-export interface SqlPart {
-  mermaidCode: string;
-  questions: SqlQuestion[];
-}
-
-export interface RuleTableRow {
-  condition: string;
-  result: string;
-}
-
-export interface TestingPart {
-  scenario: string;
-  rulesTable: RuleTableRow[];
-  question: string;
-  maxScore: number;
-}
-
-export interface ExamDataJson {
-  sqlPart?: SqlPart;
-  testingPart?: TestingPart;
-}
-
-export interface ExamSettings {
-  allowReview: boolean;
-  showSampleSolution: boolean;
-  maxAttempts?: number;
-}
-
-export interface Exam {
-  id: number;
-  title: string;
-  examType: ExamType;
-  subject?: string;
-  teacherId: number;
-  duration: number;
-  passingScore: number;
-  examDataJson: ExamDataJson;
-  aiGenerated: boolean;
-  geminiModel?: string;
-  settingsJson?: ExamSettings;
-  isPublished: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface SqlAnswers {
-  [questionId: string]: string;
-}
-
-export interface TestCase {
-  input: string;
-  expectedOutput: string;
-  actualResult?: string;
-}
-
-export interface TestingAnswers {
-  technique: string;
-  explanation: string;
-  testCases: TestCase[];
-}
-
-export interface AnswersJson {
-  sqlPart?: SqlAnswers;
-  testingPart?: TestingAnswers;
-}
-
-export interface SqlQuestionGrading {
-  score: number;
-  maxScore: number;
-  feedback: string;
-  correctSyntax: boolean;
-  optimalQuery: boolean;
-  issues?: string[];
-  suggestions?: string[];
-}
-
-export interface TestingGrading {
-  techniqueScore: number;
-  testCasesScore: number;
-  coverageScore: number;
-  feedback: string;
-  missingScenarios?: string[];
-}
-
-export interface AiGradingJson {
-  sqlPart?: {
-    [questionId: string]: SqlQuestionGrading;
-  };
-  testingPart?: TestingGrading;
-  overallFeedback: string;
-}
-
-export interface ViolationLog {
-  type: ViolationType;
-  timestamp: string;
-  details?: string;
-}
-
-export interface ExamAttempt {
-  id: number;
-  examId: number;
-  studentId: number;
-  answersJson: AnswersJson;
-  score?: number;
-  maxScore: number;
-  percentage?: number;
-  aiGradingJson?: AiGradingJson;
-  tabSwitchCount: number;
-  violationLogs: ViolationLog[];
-  startedAt: string;
-  submittedAt?: string;
-  timeTaken?: number;
-  ipAddress?: string;
-  userAgent?: string;
-}
-
 // TokenResponse
 export interface TokenResponse {
   access_token: string;
@@ -244,6 +122,29 @@ export interface ExamData {
   title?: string;
   sql_part?: ExamSQLPart;
   testing_part?: ExamTestingPart;
+  model_answers?: {
+    sql_part?: {
+      question_1_answer?: string;
+      question_2_answer?: string;
+    };
+    testing_part?: {
+      expected_technique?: string;
+      technique_reasoning?: string;
+      equivalence_classes?: string[];
+      expected_test_cases?: Array<{
+        tc_id: string;
+        description: string;
+        input: string;
+        expected_output: string;
+        type: string;
+      }>;
+      coverage_requirements?: {
+        min_valid_cases: number;
+        min_invalid_cases: number;
+        min_boundary_cases: number;
+      };
+    };
+  };
   hints_catalog?: {
     [key: string]: Array<{
       level: number;

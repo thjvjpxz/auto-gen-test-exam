@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { authService } from "@/services/auth";
 import { useAuthStore } from "@/stores/auth";
@@ -94,8 +95,7 @@ export function useMe() {
         setUser(mapUserOutToUser(userOut));
         return userOut;
       } catch (error: unknown) {
-        const axiosError = error as { response?: { status?: number } };
-        if (axiosError?.response?.status === 401) {
+        if (isAxiosError(error) && error.response?.status === 401) {
           logout();
         }
         throw error;

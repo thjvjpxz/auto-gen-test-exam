@@ -46,8 +46,9 @@ export function useExamGeneration() {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      stopPolling();
     };
-  }, []);
+  }, [stopPolling]);
 
   const realProgress = status?.progress ?? 0;
 

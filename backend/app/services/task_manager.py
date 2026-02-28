@@ -129,9 +129,10 @@ class TaskManager:
                     duration=request.duration,
                     passing_score=request.passing_score,
                     exam_data_json={
-                        "sql_part": exam_data["sql_part"],
-                        "testing_part": exam_data["testing_part"],
-                        "hints_catalog": exam_data["hints_catalog"],
+                        "sql_part": exam_data.get("sql_part"),
+                        "testing_part": exam_data.get("testing_part"),
+                        "hints_catalog": exam_data.get("hints_catalog"),
+                        "model_answers": exam_data.get("model_answers"),
                     },
                     ai_generated=True,
                     gemini_model=generator.model_name,

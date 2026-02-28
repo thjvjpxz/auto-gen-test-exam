@@ -278,7 +278,7 @@ export default function AdminUsersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-8 opacity-0 transition-opacity group-hover:opacity-100"
+                            className="size-8 cursor-pointer text-muted-foreground transition-colors duration-200 hover:text-foreground"
                           >
                             <MoreHorizontal className="size-4" />
                           </Button>
