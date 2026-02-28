@@ -432,6 +432,8 @@ export interface AnswersPayload {
 export interface TestCaseItem {
   input: string;
   expected_output: string;
+  description?: string | null;
+  test_type?: string | null;
   actual_result?: string | null;
 }
 

@@ -96,6 +96,17 @@ export const examService = {
   async deleteExam(examId: number): Promise<void> {
     await api.delete(`${EXAM_API_BASE}/${examId}`);
   },
+
+  /**
+   * Regenerate hints for an exam using AI (Admin only)
+   * Returns task_id for polling status via getGenerationStatus
+   */
+  async regenerateHints(examId: number): Promise<GenerationTaskResponse> {
+    const response = await api.post<GenerationTaskResponse>(
+      `${EXAM_API_BASE}/${examId}/regenerate-hints`,
+    );
+    return response.data;
+  },
 };
 
 export default examService;

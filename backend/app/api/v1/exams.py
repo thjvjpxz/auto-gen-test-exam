@@ -153,6 +153,58 @@ async def get_generation_status(
     return GenerationStatusResponse(**response_data)
 
 
+@router.post(
+    "/{exam_id}/regenerate-hints",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=GenerationTaskResponse,
+    summary="Gen lại hints cho đề thi (Admin only)",
+)
+async def regenerate_hints(
+    exam_id: Annotated[int, Path(gt=0, description="ID của đề thi")],
+    db: DbSessionDep,
+    current_user: Annotated[User, Depends(require_admin)],
+) -> GenerationTaskResponse:
+    """Gen lại toàn bộ hints cho đề thi dựa trên nội dung hiện có.
+
+    Cho phép cả khi đề đã published. Hints đã mua bởi sinh viên
+    không bị ảnh hưởng (đã lưu trong AttemptHintUsage).
+
+    Args:
+        exam_id: ID của đề thi cần gen lại hints.
+        db: Database session.
+        current_user: Admin user đã xác thực.
+
+    Returns:
+        GenerationTaskResponse với task_id để polling status.
+
+    Raises:
+        HTTPException: Nếu đề thi không tồn tại.
+    """
+    stmt = select(Exam).where(Exam.id == exam_id)
+    result = await db.execute(stmt)
+    exam = result.scalar_one_or_none()
+
+    if exam is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Đề thi không tồn tại",
+        )
+
+    task_id = TaskManager.generate_task_id()
+
+    TaskManager.create_regenerate_hints_task(
+        task_id=task_id,
+        user_id=current_user.id,
+        exam_id=exam_id,
+        db_session_factory=SessionLocal,
+    )
+
+    return GenerationTaskResponse(
+        task_id=task_id,
+        status=TaskStatus.PENDING,
+    )
+
+
 @router.get(
     "/{exam_id}",
     response_model=ExamOut,

@@ -26,6 +26,8 @@ class TestCaseItem(BaseModel):
 
     input: str = Field(description="Input values for the test case")
     expected_output: str = Field(description="Expected output/result")
+    description: str | None = Field(default=None, description="Description of the test case purpose")
+    test_type: str | None = Field(default=None, description="Test case type: valid, invalid, or boundary")
     actual_result: str | None = Field(default=None, description="Actual result if executed")
 
 

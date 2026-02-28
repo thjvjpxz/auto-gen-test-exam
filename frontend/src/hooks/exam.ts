@@ -277,3 +277,58 @@ export function useUpdateExam() {
     },
   });
 }
+
+/**
+ * Hook for regenerating hints with polling
+ */
+export function useRegenerateHints() {
+  const queryClient = useQueryClient();
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const regenerate = useCallback(
+    async (examId: number) => {
+      try {
+        setIsRegenerating(true);
+        setError(null);
+
+        const { task_id } = await examService.regenerateHints(examId);
+
+        // Poll until completion
+        let attempts = 0;
+        const poll = async (): Promise<void> => {
+          attempts++;
+          if (attempts > MAX_POLL_ATTEMPTS) {
+            throw new Error("Quá thời gian chờ gen lại hints");
+          }
+
+          const status = await examService.getGenerationStatus(task_id);
+
+          if (status.status === "completed") {
+            queryClient.invalidateQueries({ queryKey: ["exam", examId] });
+            return;
+          }
+
+          if (status.status === "failed") {
+            throw new Error(status.error || "Lỗi khi gen lại hints");
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
+          return poll();
+        };
+
+        await poll();
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Không thể gen lại hints";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsRegenerating(false);
+      }
+    },
+    [queryClient],
+  );
+
+  return { regenerate, isRegenerating, error };
+}

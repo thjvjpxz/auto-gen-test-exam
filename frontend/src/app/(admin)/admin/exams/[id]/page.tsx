@@ -15,6 +15,7 @@ import {
   Calendar,
   Sparkles,
   Lightbulb,
+  RefreshCw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import {
   usePublishExam,
   useUnpublishExam,
   useDeleteExam,
+  useRegenerateHints,
 } from "@/hooks/exam";
 import { MermaidRenderer } from "@/components/exam/mermaid-renderer";
 import { ExamSettingsEditor } from "@/components/admin/exam-settings-editor";
@@ -64,6 +66,7 @@ export default function ExamDetailPage({ params }: PageProps) {
   const publishMutation = usePublishExam();
   const unpublishMutation = useUnpublishExam();
   const deleteMutation = useDeleteExam();
+  const { regenerate: regenerateHints, isRegenerating } = useRegenerateHints();
 
   const handlePublish = async () => {
     try {
@@ -96,6 +99,21 @@ export default function ExamDetailPage({ params }: PageProps) {
       router.push("/admin/exams");
     } catch {
       toast.error("Không thể xóa đề thi");
+    }
+  };
+
+  const handleRegenerateHints = async () => {
+    if (
+      !confirm(
+        "Gen lại toàn bộ hints cho đề thi này?\n\nHints đã mua bởi sinh viên sẽ KHÔNG bị thay đổi. Chỉ các lần mua hints SAU mới dùng nội dung mới.",
+      )
+    )
+      return;
+    try {
+      await regenerateHints(examId);
+      toast.success("Đã gen lại hints thành công!");
+    } catch {
+      toast.error("Không thể gen lại hints");
     }
   };
 
@@ -216,6 +234,17 @@ export default function ExamDetailPage({ params }: PageProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRegenerateHints}
+            disabled={isRegenerating}
+            className="cursor-pointer transition-all duration-200 hover:border-primary/50 hover:text-primary"
+          >
+            <RefreshCw
+              className={`mr-2 size-4 ${isRegenerating ? "animate-spin" : ""}`}
+            />
+            {isRegenerating ? "Đang gen..." : "Gen lại Hints"}
+          </Button>
           {exam.is_published ? (
             <Button
               variant="outline"
