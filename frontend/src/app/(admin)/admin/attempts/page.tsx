@@ -44,6 +44,9 @@ import { fadeInDown } from "@/lib/motion";
 export default function AdminAttemptsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
+  const [regradingAttemptId, setRegradingAttemptId] = useState<number | null>(
+    null,
+  );
 
   const limit = 15;
   const { data, isLoading } = useAdminAttempts({
@@ -246,7 +249,7 @@ export default function AdminAttemptsPage() {
                       <div className="flex items-center gap-2">
                         <FileText className="size-4 text-primary" />
                         <span
-                          className="max-w-[200px] truncate"
+                          className="max-w-[300px] truncate"
                           title={attempt.exam_title}
                         >
                           {attempt.exam_title}
@@ -255,10 +258,10 @@ export default function AdminAttemptsPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <span className="font-medium">
-                        {attempt.score.toFixed(1)} /{" "}
-                        {attempt.max_score.toFixed(1)}
+                        {(attempt.score ?? 0).toFixed(1)} /{" "}
+                        {(attempt.max_score ?? 100).toFixed(1)}
                       </span>
-                      {attempt.percentage !== null && (
+                      {attempt.percentage != null && (
                         <span className="ml-1 text-sm text-muted-foreground">
                           ({attempt.percentage.toFixed(0)}%)
                         </span>
@@ -280,13 +283,19 @@ export default function AdminAttemptsPage() {
                     <TableCell>
                       {attempt.status === "submitted" ? (
                         <Button
-                          onClick={() => regradeMutation.mutate(attempt.id)}
+                          onClick={() => {
+                            setRegradingAttemptId(attempt.id);
+                            regradeMutation.mutate(attempt.id, {
+                              onSettled: () => setRegradingAttemptId(null),
+                            });
+                          }}
                           disabled={regradeMutation.isPending}
                           variant="ghost"
                           size="sm"
                           className="gap-1"
                         >
-                          {regradeMutation.isPending ? (
+                          {regradeMutation.isPending &&
+                          regradingAttemptId === attempt.id ? (
                             <Loader2 className="size-4 animate-spin" />
                           ) : (
                             <RefreshCw className="size-4" />
@@ -298,7 +307,7 @@ export default function AdminAttemptsPage() {
                           variant="ghost"
                           size="icon"
                           asChild
-                          className="size-8 opacity-0 transition-opacity group-hover:opacity-100"
+                          className="size-8 cursor-pointer text-muted-foreground transition-colors duration-200 hover:text-foreground"
                         >
                           <Link
                             href={`/exams/${attempt.exam_id}/result/${attempt.id}?from=admin`}

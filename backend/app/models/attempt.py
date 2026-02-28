@@ -155,19 +155,20 @@ class ExamAttempt(Base, TimestampMixin):
     ) -> None:
         """Add a violation to the logs and update counters.
 
+        Creates a new list reference so SQLAlchemy detects the JSON change.
+
         Args:
             violation_type: Type of violation.
             timestamp: ISO timestamp of the violation.
             details: Additional details about the violation.
         """
-        if self.violation_logs is None:
-            self.violation_logs = []
-
-        self.violation_logs.append({
+        current_logs = list(self.violation_logs or [])
+        current_logs.append({
             "type": violation_type,
             "timestamp": timestamp,
             "details": details,
         })
+        self.violation_logs = current_logs
 
         if violation_type == "tab_switch":
             self.tab_switch_count += 1

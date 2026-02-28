@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from sqlalchemy import func, select
 
-from app.api.deps import DbSessionDep, get_current_user
+from app.api.deps import AdminUser, CurrentUser, DbSessionDep, require_admin
 from app.models.attempt import AttemptStatus, ExamAttempt
 from app.models.exam import Exam
 from app.models.user import User, UserRole
@@ -19,6 +19,7 @@ from app.schemas.attempt import (
     AttemptSaveRequest,
     AttemptStartResponse,
     AttemptSubmitRequest,
+    ExamConflictResponse,
     UserAttemptHistoryItem,
     UserAttemptHistoryResponse,
     ViolationLogRequest,
@@ -27,34 +28,12 @@ from app.schemas.attempt import (
 from app.schemas.exam import ExamDataOut
 from app.schemas.grading import AttemptResultOut, GradingResult, SubmittedAnswers
 from app.services.coin_reward_service import CoinRewardService
-from app.services.grading_service import GradingService
+from app.services.grading_service import get_grading_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["attempts"])
 
-# Type aliases
-CurrentUser = Annotated[User, Depends(get_current_user)]
-
-
-async def require_admin(current_user: CurrentUser) -> User:
-    """Dependency to ensure user is an admin.
-
-    Args:
-        current_user: The authenticated user.
-
-    Returns:
-        User if admin, raises HTTPException otherwise.
-
-    Raises:
-        HTTPException: If user is not an admin.
-    """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Chỉ admin mới có quyền thực hiện thao tác này",
-        )
-    return current_user
 
 
 # =============================================================================
@@ -206,7 +185,6 @@ async def start_exam_attempt(
             duration_seconds = global_exam.duration * 60
             time_remaining = max(0, duration_seconds - elapsed_seconds)
             
-            from app.schemas.attempt import ExamConflictResponse
             
             conflict_data = ExamConflictResponse(
                 message=f"Bạn đang làm bài thi '{global_exam.title}'. Vui lòng hoàn thành hoặc hủy bỏ trước khi bắt đầu bài thi mới.",
@@ -258,7 +236,7 @@ async def start_exam_attempt(
             answers_payload = AnswersPayload(**current_answers)
             
             try:
-                grading_service = GradingService()
+                grading_service = get_grading_service()
                 grading_result = await grading_service.grade_attempt(
                     exam_data=exam.exam_data_json,
                     answers=answers_payload,
@@ -470,7 +448,7 @@ async def submit_exam_attempt(
 
     # Grade the attempt
     try:
-        grading_service = GradingService()
+        grading_service = get_grading_service()
         grading_result = await grading_service.grade_attempt(
             exam_data=exam.exam_data_json,
             answers=request.answers,
@@ -692,7 +670,7 @@ async def get_attempt_result(
 async def list_exam_attempts(
     exam_id: Annotated[int, Path(gt=0, description="ID của đề thi")],
     db: DbSessionDep,
-    current_user: Annotated[User, Depends(require_admin)],
+    current_user: AdminUser,
     skip: Annotated[int, Query(ge=0, description="Số lượng bỏ qua")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Số lượng tối đa")] = 20,
     status_filter: Annotated[AttemptStatus | None, Query(alias="status")] = None,

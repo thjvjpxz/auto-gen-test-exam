@@ -35,6 +35,7 @@ class ExamDataOut(BaseModel):
 
     sql_part: ExamSQLPart | None = None
     testing_part: ExamTestingPart | None = None
+    model_answers: dict[str, Any] | None = None
     hints_catalog: dict[str, list[dict[str, Any]]] | None = None
 
 

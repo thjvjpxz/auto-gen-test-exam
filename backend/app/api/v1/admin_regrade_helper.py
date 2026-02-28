@@ -10,7 +10,7 @@ from app.models.exam import Exam
 from app.schemas.admin import AdminRegradeResponse
 from app.schemas.attempt import AnswersPayload
 from app.services.coin_reward_service import CoinRewardService
-from app.services.grading_service import GradingService
+from app.services.grading_service import get_grading_service
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ async def regrade_single_attempt(
         )
 
     try:
-        grading_service = GradingService()
+        grading_service = get_grading_service()
         answers = AnswersPayload(**attempt.answers_json)
         
         grading_result = await grading_service.grade_attempt(

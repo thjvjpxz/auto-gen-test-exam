@@ -535,7 +535,7 @@ export default function ExamListPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="size-8 cursor-pointer opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                              className="size-8 cursor-pointer text-muted-foreground transition-colors duration-200 hover:text-foreground"
                             >
                               <MoreHorizontal className="size-4" />
                             </Button>

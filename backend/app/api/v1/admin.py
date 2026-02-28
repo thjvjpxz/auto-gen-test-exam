@@ -3,10 +3,10 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, HTTPException, Path, Query, status
 from sqlalchemy import func, select
 
-from app.api.deps import DbSessionDep, get_current_user
+from app.api.deps import AdminUser, DbSessionDep
 from app.models.attempt import AttemptStatus, ExamAttempt
 from app.models.exam import Exam
 from app.models.user import User, UserRole
@@ -30,30 +30,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
 
-
-def require_admin(current_user: CurrentUser) -> User:
-    """Dependency to ensure user is an admin.
-
-    Args:
-        current_user: The authenticated user.
-
-    Returns:
-        User if admin, raises HTTPException otherwise.
-
-    Raises:
-        HTTPException: If user is not an admin.
-    """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return current_user
-
-
-AdminUser = Annotated[User, Depends(require_admin)]
 
 
 @router.get("/stats", response_model=AdminStatsOut)

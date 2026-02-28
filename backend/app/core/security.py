@@ -11,7 +11,7 @@ pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    """Băm mật khẩu bằng bcrypt_sha256"""
+    """Băm mật khẩu bằng argon2."""
     return pwd_context.hash(password)
 
 
