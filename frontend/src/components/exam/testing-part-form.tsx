@@ -36,6 +36,12 @@ const TESTING_TECHNIQUES = [
   { value: "use_case", label: "Use Case Testing" },
 ];
 
+const TEST_CASE_TYPES = [
+  { value: "valid", label: "Valid" },
+  { value: "invalid", label: "Invalid" },
+  { value: "boundary", label: "Boundary" },
+];
+
 const MAX_TEST_CASES = 20;
 
 interface TestingPartFormProps {
@@ -81,7 +87,10 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
 
   const handleAddTestCase = useCallback(() => {
     if (testCases.length >= MAX_TEST_CASES) return;
-    const newTestCases = [...testCases, { input: "", expected_output: "" }];
+    const newTestCases = [
+      ...testCases,
+      { input: "", expected_output: "", description: "", test_type: "valid" },
+    ];
     updateTestingAnswer("test_cases", newTestCases);
   }, [testCases, updateTestingAnswer]);
 
@@ -289,10 +298,12 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold">
+                      <span className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-white shadow-sm">
                         {index + 1}
                       </span>
-                      Test Case
+                      <span className="text-xs text-muted-foreground">
+                        TC_{String(index + 1).padStart(2, "0")}
+                      </span>
                     </span>
                     <Button
                       type="button"
@@ -304,8 +315,33 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
+
+                  {/* Mô tả - full width */}
+                  <div className="mb-3 space-y-1.5">
+                    <Label
+                      htmlFor={`desc-${index}`}
+                      className="text-xs text-muted-foreground"
+                    >
+                      Mô tả
+                    </Label>
+                    <Input
+                      id={`desc-${index}`}
+                      value={testCase.description ?? ""}
+                      onChange={(e) =>
+                        handleTestCaseChange(
+                          index,
+                          "description",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Mô tả mục đích của test case..."
+                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+
+                  {/* Input, Expected Output, Loại - 3 columns */}
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_140px]">
+                    <div className="space-y-1.5">
                       <Label
                         htmlFor={`input-${index}`}
                         className="text-xs text-muted-foreground"
@@ -322,7 +358,7 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                         className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label
                         htmlFor={`output-${index}`}
                         className="text-xs text-muted-foreground"
@@ -342,6 +378,32 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                         placeholder="Kết quả mong đợi..."
                         className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">
+                        Loại
+                      </Label>
+                      <Select
+                        value={testCase.test_type ?? "valid"}
+                        onValueChange={(value) =>
+                          handleTestCaseChange(index, "test_type", value)
+                        }
+                      >
+                        <SelectTrigger className="w-full cursor-pointer text-xs transition-all duration-200 focus:ring-2 focus:ring-primary/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TEST_CASE_TYPES.map((t) => (
+                            <SelectItem
+                              key={t.value}
+                              value={t.value}
+                              className="cursor-pointer text-xs"
+                            >
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>

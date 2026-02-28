@@ -176,6 +176,104 @@ class TaskManager:
                 del cls._running_tasks[task_id]
 
     @classmethod
+    def create_regenerate_hints_task(
+        cls,
+        task_id: str,
+        user_id: int,
+        exam_id: int,
+        db_session_factory: Any,
+    ) -> None:
+        """Create and start a background task to regenerate hints for an exam.
+        
+        Args:
+            task_id: Unique task identifier.
+            user_id: ID of the admin user.
+            exam_id: ID of the exam to regenerate hints for.
+            db_session_factory: Database session factory.
+        """
+        cls._tasks[task_id] = {
+            "status": TaskStatus.PENDING,
+            "created_at": datetime.now(timezone.utc),
+            "user_id": user_id,
+            "exam_id": exam_id,
+            "error": None,
+            "progress": 0,
+        }
+
+        task = asyncio.create_task(
+            cls._run_regenerate_hints_task(
+                task_id=task_id,
+                exam_id=exam_id,
+                db_session_factory=db_session_factory,
+            )
+        )
+        cls._running_tasks[task_id] = task
+
+    @classmethod
+    async def _run_regenerate_hints_task(
+        cls,
+        task_id: str,
+        exam_id: int,
+        db_session_factory: Any,
+    ) -> None:
+        """Run the hints regeneration task in the background.
+        
+        Args:
+            task_id: Unique task identifier.
+            exam_id: ID of the exam to regenerate hints for.
+            db_session_factory: Database session factory.
+        """
+        try:
+            logger.info(f"Starting hints regeneration task {task_id} for exam {exam_id}")
+            cls._update_progress(task_id, PROGRESS_INIT)
+
+            async with db_session_factory() as db:
+                from sqlalchemy import select
+                stmt = select(Exam).filter_by(id=exam_id)
+                result = await db.execute(stmt)
+                exam = result.scalar_one_or_none()
+
+                if not exam:
+                    raise ValueError(f"Exam {exam_id} not found")
+
+                exam_data = exam.exam_data_json
+                cls._update_progress(task_id, PROGRESS_AI_READY)
+
+                generator = ExamGeneratorService()
+                logger.info(f"Calling Gemini API to regenerate hints for task {task_id}")
+                new_hints = await generator.regenerate_hints(exam_data)
+                cls._update_progress(task_id, PROGRESS_AI_COMPLETE)
+
+                # Update hints_catalog in exam_data_json
+                updated_data = dict(exam_data)
+                updated_data["hints_catalog"] = new_hints
+                exam.exam_data_json = updated_data
+
+                await db.commit()
+                cls._update_progress(task_id, PROGRESS_DONE)
+
+            cls._tasks[task_id].update({
+                "status": TaskStatus.COMPLETED,
+                "exam_id": exam_id,
+                "completed_at": datetime.now(timezone.utc),
+                "progress": PROGRESS_DONE,
+            })
+
+            logger.info(f"Task {task_id} completed: hints regenerated for exam {exam_id}")
+
+        except Exception as e:
+            logger.error(f"Task {task_id} failed: {str(e)}", exc_info=True)
+            cls._tasks[task_id].update({
+                "status": TaskStatus.FAILED,
+                "error": str(e),
+                "failed_at": datetime.now(timezone.utc),
+            })
+
+        finally:
+            if task_id in cls._running_tasks:
+                del cls._running_tasks[task_id]
+
+    @classmethod
     def _update_progress(cls, task_id: str, progress: int) -> None:
         """Update task progress percentage.
         
