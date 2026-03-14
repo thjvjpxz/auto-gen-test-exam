@@ -22,6 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
+import { useHintCatalog, usePurchasedHints } from "@/hooks/use-hint-catalog";
+import { usePurchaseHint } from "@/hooks/use-purchase-hint";
+import { HintButton } from "./hint-button";
+import { HintPanel } from "./hint-panel";
 import type { ExamData, TestCaseItem } from "@/types";
 
 const TESTING_TECHNIQUES = [
@@ -30,6 +34,12 @@ const TESTING_TECHNIQUES = [
   { value: "decision_table", label: "Decision Table Testing" },
   { value: "state_transition", label: "State Transition Testing" },
   { value: "use_case", label: "Use Case Testing" },
+];
+
+const TEST_CASE_TYPES = [
+  { value: "valid", label: "Valid" },
+  { value: "invalid", label: "Invalid" },
+  { value: "boundary", label: "Boundary" },
 ];
 
 const MAX_TEST_CASES = 20;
@@ -44,11 +54,17 @@ interface TestingPartFormProps {
 export function TestingPartForm({ testingPart }: TestingPartFormProps) {
   const updateTestingAnswer = useExamAttemptStore((s) => s.updateTestingAnswer);
   const answers = useExamAttemptStore((s) => s.answers);
+  const attemptId = useExamAttemptStore((s) => s.attemptId);
+  const examId = useExamAttemptStore((s) => s.examId);
 
   const testingAnswers = useMemo(
     () => answers.testing_part ?? { test_cases: [] },
     [answers.testing_part],
   );
+
+  const { data: hintCatalog } = useHintCatalog(examId);
+  const { data: purchasedHints = [] } = usePurchasedHints(attemptId);
+  const { mutate: purchaseHint, isPending: isPurchasing } = usePurchaseHint();
 
   const testCases = useMemo<TestCaseItem[]>(
     () => testingAnswers.test_cases ?? [],
@@ -71,7 +87,10 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
 
   const handleAddTestCase = useCallback(() => {
     if (testCases.length >= MAX_TEST_CASES) return;
-    const newTestCases = [...testCases, { input: "", expected_output: "" }];
+    const newTestCases = [
+      ...testCases,
+      { input: "", expected_output: "", description: "", test_type: "valid" },
+    ];
     updateTestingAnswer("test_cases", newTestCases);
   }, [testCases, updateTestingAnswer]);
 
@@ -91,6 +110,17 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
       updateTestingAnswer("test_cases", newTestCases);
     },
     [testCases, updateTestingAnswer],
+  );
+
+  const handlePurchaseHint = useCallback(
+    (questionKey: string, hintLevel: number) => {
+      if (!attemptId) return;
+      purchaseHint({
+        attemptId,
+        request: { question_key: questionKey, hint_level: hintLevel },
+      });
+    },
+    [attemptId, purchaseHint],
   );
 
   if (!testingPart) return null;
@@ -144,17 +174,35 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
 
         {/* Question */}
         {testingPart.question && (
-          <div className="overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
-            <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-800">
-              <Lightbulb className="size-4" />
-              Câu hỏi
-            </h3>
-            <p className="text-sm text-amber-700">{testingPart.question}</p>
-            <div className="mt-3">
-              <span className="rounded-full bg-amber-200/50 px-2.5 py-1 text-xs font-medium text-amber-800">
-                Điểm tối đa: {testingPart.max_points ?? 50}
-              </span>
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                  <Lightbulb className="size-4" />
+                  Câu hỏi
+                </h3>
+                {hintCatalog?.["testing.question"] && (
+                  <HintButton
+                    questionKey="testing.question"
+                    hints={hintCatalog["testing.question"]}
+                    onPurchase={(level) =>
+                      handlePurchaseHint("testing.question", level)
+                    }
+                    isPurchasing={isPurchasing}
+                  />
+                )}
+              </div>
+              <p className="text-sm text-amber-700">{testingPart.question}</p>
+              <div className="mt-3">
+                <span className="rounded-full bg-amber-200/50 px-2.5 py-1 text-xs font-medium text-amber-800">
+                  Điểm tối đa: {testingPart.max_points ?? 50}
+                </span>
+              </div>
             </div>
+            <HintPanel
+              questionKey="testing.question"
+              purchasedHints={purchasedHints}
+            />
           </div>
         )}
 
@@ -250,10 +298,12 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold">
+                      <span className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-white shadow-sm">
                         {index + 1}
                       </span>
-                      Test Case
+                      <span className="text-xs text-muted-foreground">
+                        TC_{String(index + 1).padStart(2, "0")}
+                      </span>
                     </span>
                     <Button
                       type="button"
@@ -265,8 +315,33 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
+
+                  {/* Mô tả - full width */}
+                  <div className="mb-3 space-y-1.5">
+                    <Label
+                      htmlFor={`desc-${index}`}
+                      className="text-xs text-muted-foreground"
+                    >
+                      Mô tả
+                    </Label>
+                    <Input
+                      id={`desc-${index}`}
+                      value={testCase.description ?? ""}
+                      onChange={(e) =>
+                        handleTestCaseChange(
+                          index,
+                          "description",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Mô tả mục đích của test case..."
+                      className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+
+                  {/* Input, Expected Output, Loại - 3 columns */}
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_140px]">
+                    <div className="space-y-1.5">
                       <Label
                         htmlFor={`input-${index}`}
                         className="text-xs text-muted-foreground"
@@ -283,7 +358,7 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                         className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label
                         htmlFor={`output-${index}`}
                         className="text-xs text-muted-foreground"
@@ -303,6 +378,32 @@ export function TestingPartForm({ testingPart }: TestingPartFormProps) {
                         placeholder="Kết quả mong đợi..."
                         className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">
+                        Loại
+                      </Label>
+                      <Select
+                        value={testCase.test_type ?? "valid"}
+                        onValueChange={(value) =>
+                          handleTestCaseChange(index, "test_type", value)
+                        }
+                      >
+                        <SelectTrigger className="w-full cursor-pointer text-xs transition-all duration-200 focus:ring-2 focus:ring-primary/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TEST_CASE_TYPES.map((t) => (
+                            <SelectItem
+                              key={t.value}
+                              value={t.value}
+                              className="cursor-pointer text-xs"
+                            >
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>

@@ -1,12 +1,20 @@
 """AI grading service for exam attempts using Google Gemini."""
 
 import asyncio
+import functools
 import json
 import logging
 from typing import Any
 
 from google import genai
 from google.genai import types
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception,
+    before_sleep_log,
+)
 
 from app.core.config import get_settings
 from app.schemas.attempt import AnswersPayload
@@ -27,6 +35,22 @@ logger = logging.getLogger(__name__)
 
 GRADING_MODEL = "gemini-2.5-flash-lite"
 GRADING_TEMPERATURE = 0.3
+
+
+def _is_retryable_error(exception: Exception) -> bool:
+    """Check if exception is a transient error that should be retried.
+
+    Args:
+        exception: The exception to check.
+
+    Returns:
+        True if error is retryable (503, 429, timeout), False otherwise.
+    """
+    error_str = str(exception).lower()
+    return any(
+        keyword in error_str
+        for keyword in ["503", "unavailable", "429", "resource_exhausted", "timeout"]
+    )
 
 
 class GradingService:
@@ -54,8 +78,19 @@ class GradingService:
         self.client = genai.Client(api_key=settings.gemini_api_key)
         self.model_name = model_name
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=8),
+        retry=retry_if_exception(_is_retryable_error),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
+    )
     async def _call_gemini_api(self, prompt: str) -> dict[str, Any]:
-        """Call Gemini API and parse JSON response.
+        """Call Gemini API and parse JSON response with retry logic.
+
+        Retries up to 3 times with exponential backoff (2s → 4s → 8s)
+        for transient errors (503 UNAVAILABLE, 429 RESOURCE_EXHAUSTED, timeout).
+        Does not retry for client errors (400, 401, 403).
 
         Args:
             prompt: The formatted prompt to send to the model.
@@ -65,7 +100,7 @@ class GradingService:
 
         Raises:
             json.JSONDecodeError: If response is not valid JSON.
-            RuntimeError: If API call fails.
+            RuntimeError: If API call fails after all retries.
         """
         try:
             response = await asyncio.to_thread(
@@ -90,13 +125,15 @@ class GradingService:
         mermaid_code: str,
         question: str,
         answer: str | None,
+        model_answer: str | None = None,
     ) -> SQLQuestionGrading:
-        """Grade a single SQL question.
+        """Grade a single SQL question by comparing with model answer.
 
         Args:
             mermaid_code: ERD diagram in Mermaid syntax.
             question: The SQL question text.
             answer: Student's SQL query answer.
+            model_answer: Reference SQL answer for comparison.
 
         Returns:
             SQLQuestionGrading with score and feedback.
@@ -112,7 +149,9 @@ class GradingService:
                 suggestions=["Hãy viết câu truy vấn SQL theo yêu cầu đề bài"],
             )
 
-        prompt = build_sql_grading_prompt(mermaid_code, question, answer)
+        prompt = build_sql_grading_prompt(
+            mermaid_code, question, answer, model_answer=model_answer,
+        )
 
         try:
             result = await self._call_gemini_api(prompt)
@@ -139,8 +178,13 @@ class GradingService:
         technique: str | None,
         explanation: str | None,
         test_cases: list[dict] | None,
+        expected_technique: str | None = None,
+        technique_reasoning: str | None = None,
+        equivalence_classes: list[str] | None = None,
+        expected_test_cases: list[dict] | None = None,
+        coverage_requirements: dict | None = None,
     ) -> TestingPartGrading:
-        """Grade the testing part of an exam.
+        """Grade the testing part by comparing with model answers.
 
         Args:
             scenario: Testing scenario description.
@@ -149,6 +193,11 @@ class GradingService:
             technique: Student's selected testing technique.
             explanation: Student's explanation for technique choice.
             test_cases: List of student's test cases.
+            expected_technique: Reference testing technique.
+            technique_reasoning: Why the expected technique is appropriate.
+            equivalence_classes: Expected equivalence classes/boundary values.
+            expected_test_cases: Reference test cases for comparison.
+            coverage_requirements: Min counts for valid/invalid/boundary cases.
 
         Returns:
             TestingPartGrading with scores and feedback.
@@ -173,6 +222,11 @@ class GradingService:
             technique=technique or "",
             explanation=explanation or "",
             test_cases=test_cases or [],
+            expected_technique=expected_technique,
+            technique_reasoning=technique_reasoning,
+            equivalence_classes=equivalence_classes,
+            expected_test_cases=expected_test_cases,
+            coverage_requirements=coverage_requirements,
         )
 
         try:
@@ -212,7 +266,8 @@ class GradingService:
         Returns:
             Tuple of (overall_feedback, strengths, improvements).
         """
-        percentage = (total_score / 100) * 100
+        max_score = 100
+        percentage = (total_score / max_score) * 100 if max_score > 0 else 0
         passed = percentage >= passing_score
 
         sql_details = "Không có phần SQL"
@@ -266,12 +321,14 @@ class GradingService:
         """
         sql_grading: SQLPartGrading | None = None
         testing_grading: TestingPartGrading | None = None
+        model_answers = exam_data.get("model_answers", {})
 
         # Grade SQL part
         sql_part = exam_data.get("sql_part")
         if sql_part and answers.sql_part:
             mermaid_code = sql_part.get("mermaid_code", "")
             questions = sql_part.get("questions", [])
+            sql_model = model_answers.get("sql_part", {}) if model_answers else {}
 
             q1_grading = None
             q2_grading = None
@@ -281,6 +338,7 @@ class GradingService:
                     mermaid_code=mermaid_code,
                     question=questions[0],
                     answer=answers.sql_part.question_1_answer,
+                    model_answer=sql_model.get("question_1_answer") if sql_model else None,
                 )
 
             if len(questions) > 1:
@@ -288,6 +346,7 @@ class GradingService:
                     mermaid_code=mermaid_code,
                     question=questions[1],
                     answer=answers.sql_part.question_2_answer,
+                    model_answer=sql_model.get("question_2_answer") if sql_model else None,
                 )
 
             sql_total = (
@@ -309,6 +368,9 @@ class GradingService:
                 for tc in (answers.testing_part.test_cases or [])
             ]
 
+            testing_model = model_answers.get("testing_part", {}) if model_answers else {}
+            cov_req = testing_model.get("coverage_requirements") if testing_model else None
+
             testing_grading = await self.grade_testing_part(
                 scenario=testing_part.get("scenario", ""),
                 rules_table=testing_part.get("rules_table", []),
@@ -316,13 +378,19 @@ class GradingService:
                 technique=answers.testing_part.technique,
                 explanation=answers.testing_part.explanation,
                 test_cases=test_cases_dict,
+                expected_technique=testing_model.get("expected_technique") if testing_model else None,
+                technique_reasoning=testing_model.get("technique_reasoning") if testing_model else None,
+                equivalence_classes=testing_model.get("equivalence_classes") if testing_model else None,
+                expected_test_cases=testing_model.get("expected_test_cases") if testing_model else None,
+                coverage_requirements=cov_req,
             )
 
         # Calculate total score
         sql_score = sql_grading.total_score if sql_grading else 0
         testing_score = testing_grading.total_score if testing_grading else 0
         total_score = sql_score + testing_score
-        percentage = (total_score / 100) * 100
+        max_score = 100
+        percentage = (total_score / max_score) * 100 if max_score > 0 else 0
         passed = percentage >= passing_score
 
         # Collect grading errors and determine status
@@ -372,3 +440,17 @@ class GradingService:
             grading_errors=grading_errors,
         )
 
+
+@functools.lru_cache(maxsize=1)
+def get_grading_service(model_name: str = GRADING_MODEL) -> GradingService:
+    """Get or create cached GradingService singleton.
+
+    Avoids re-creating genai.Client on every request.
+
+    Args:
+        model_name: Gemini model identifier.
+
+    Returns:
+        Cached GradingService instance.
+    """
+    return GradingService(model_name=model_name)

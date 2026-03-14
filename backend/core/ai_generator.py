@@ -87,7 +87,7 @@ Yêu cầu:
 ## OUTPUT FORMAT (JSON)
 
 {
-  "exam_title": "string - Tiêu đề cụ thể theo chủ đề, ví dụ: Đề thi CSDL & Kiểm thử - Hệ thống Quản lý Gym",
+  "exam_title": "string - Tiêu đề cụ thể theo chủ đề, ví dụ: Hệ thống Quản lý Gym",
   "sql_part": {
     "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh",
     "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]

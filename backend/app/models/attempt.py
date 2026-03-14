@@ -4,14 +4,16 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, func, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
 from app.models.exam import JSONText
 
 if TYPE_CHECKING:
+    from app.models.coin_transaction import CoinTransaction
     from app.models.exam import Exam
+    from app.models.hint_usage import AttemptHintUsage
     from app.models.user import User
 
 
@@ -96,8 +98,22 @@ class ExamAttempt(Base, TimestampMixin):
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
+    coin_rewarded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    coin_reward_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    hint_spent_total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     exam: Mapped["Exam"] = relationship("Exam", back_populates="attempts")
     user: Mapped["User"] = relationship("User", back_populates="attempts")
+    coin_transactions: Mapped[list["CoinTransaction"]] = relationship(
+        "CoinTransaction",
+        back_populates="attempt",
+        cascade="all, delete-orphan",
+    )
+    hint_usages: Mapped[list["AttemptHintUsage"]] = relationship(
+        "AttemptHintUsage",
+        back_populates="attempt",
+        cascade="all, delete-orphan",
+    )
 
     def calculate_trust_score(self) -> int:
         """Calculate trust score based on violation counts.
@@ -139,19 +155,20 @@ class ExamAttempt(Base, TimestampMixin):
     ) -> None:
         """Add a violation to the logs and update counters.
 
+        Creates a new list reference so SQLAlchemy detects the JSON change.
+
         Args:
             violation_type: Type of violation.
             timestamp: ISO timestamp of the violation.
             details: Additional details about the violation.
         """
-        if self.violation_logs is None:
-            self.violation_logs = []
-
-        self.violation_logs.append({
+        current_logs = list(self.violation_logs or [])
+        current_logs.append({
             "type": violation_type,
             "timestamp": timestamp,
             "details": details,
         })
+        self.violation_logs = current_logs
 
         if violation_type == "tab_switch":
             self.tab_switch_count += 1

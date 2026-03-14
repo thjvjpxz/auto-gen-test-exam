@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   FileText,
   Clock,
@@ -14,6 +15,10 @@ import {
   XCircle,
   Eye,
   RotateCcw,
+  Coins,
+  X,
+  Lightbulb,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -26,7 +31,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useExams } from "@/hooks/exam";
-import type { ExamListItem } from "@/types";
+import { useStartExam, useSubmitExam } from "@/hooks/attempt";
+import { ExamConflictDialog } from "@/components/exam/exam-conflict-dialog";
+import type {
+  ExamListItem,
+  ExamConflictResponse,
+  AnswersPayload,
+} from "@/types";
+import { toast } from "sonner";
 import {
   staggerContainer,
   springItem,
@@ -40,12 +52,109 @@ import {
 export default function ExamsPage() {
   const router = useRouter();
   const { data: examsData, isLoading, error } = useExams();
+  const [showCoinInfo, setShowCoinInfo] = useState(() => {
+    if (typeof window !== "undefined") {
+      const dismissed = localStorage.getItem("coin-info-dismissed");
+      return dismissed !== "true";
+    }
+    return true;
+  });
+
+  const [conflictData, setConflictData] = useState<ExamConflictResponse | null>(
+    null,
+  );
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [pendingExamId, setPendingExamId] = useState<number | null>(null);
+
+  const startExam = useStartExam();
+  const submitExam = useSubmitExam();
+
+  const handleDismissCoinInfo = () => {
+    setShowCoinInfo(false);
+    localStorage.setItem("coin-info-dismissed", "true");
+  };
 
   const publishedExams =
     examsData?.items?.filter((exam) => exam.is_published) ?? [];
 
   const handleStartExam = (examId: number) => {
-    router.push(`/exams/${examId}/take`);
+    setPendingExamId(examId);
+
+    startExam.mutate(examId, {
+      onSuccess: () => {
+        router.push(`/exams/${examId}/take`);
+      },
+      onError: (error: unknown) => {
+        if (
+          error &&
+          typeof error === "object" &&
+          "response" in error &&
+          error.response &&
+          typeof error.response === "object" &&
+          "status" in error.response &&
+          error.response.status === 409
+        ) {
+          const response = error.response as {
+            data?: { detail?: unknown };
+          };
+          const conflictDetail = response.data?.detail;
+          if (conflictDetail && typeof conflictDetail === "object") {
+            setConflictData(conflictDetail as ExamConflictResponse);
+            setShowConflictDialog(true);
+          }
+        }
+      },
+    });
+  };
+
+  const handleContinueExisting = () => {
+    if (conflictData) {
+      setShowConflictDialog(false);
+      router.push(`/exams/${conflictData.existing_exam_id}/take`);
+      setConflictData(null);
+      setPendingExamId(null);
+    }
+  };
+
+  const handleForceSubmit = () => {
+    if (!conflictData) return;
+
+    const attemptId = conflictData.existing_attempt_id;
+    const localDraftKey = `exam_draft_${attemptId}`;
+    const savedDraft = localStorage.getItem(localDraftKey);
+
+    let answers: AnswersPayload = {
+      sql_part: null,
+      testing_part: null,
+    };
+
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        answers = parsed.answers || answers;
+      } catch {
+        console.warn("Failed to parse saved draft");
+      }
+    }
+
+    submitExam.mutate(
+      { attemptId, answers },
+      {
+        onSuccess: () => {
+          localStorage.removeItem(localDraftKey);
+          setShowConflictDialog(false);
+          setConflictData(null);
+
+          if (pendingExamId) {
+            router.push(`/exams/${pendingExamId}/take`);
+          }
+        },
+        onError: (error) => {
+          console.error("Force submit failed:", error);
+          toast.error("Không thể nộp bài cũ. Vui lòng thử lại.");
+        },
+      },
+    );
   };
 
   const getExamTypeBadge = (type: string) => {
@@ -97,6 +206,43 @@ export default function ExamsPage() {
           </div>
         </div>
       </motion.div>
+
+      {showCoinInfo && (
+        <motion.div
+          variants={springItem}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+        >
+          <Card className="relative overflow-hidden border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+            <div className="h-1 bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500" />
+            <CardContent className="pt-4">
+              <button
+                onClick={handleDismissCoinInfo}
+                className="absolute right-3 top-3 rounded-md p-1 transition-colors hover:bg-amber-100"
+                aria-label="Đóng"
+              >
+                <X className="size-4 text-amber-600" />
+              </button>
+              <div className="flex items-start gap-4">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                  <Coins className="size-6 text-amber-600" />
+                </div>
+                <div className="flex-1 pr-8">
+                  <h3 className="flex items-center gap-2 font-semibold text-amber-900">
+                    <Lightbulb className="size-4" />
+                    Mẹo: Hệ thống Coin
+                  </h3>
+                  <p className="mt-1 text-sm text-amber-800">
+                    Làm bài đạt điểm cao để kiếm coin, sau đó dùng coin để mua
+                    gợi ý trong các bài thi tiếp theo!
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -152,6 +298,15 @@ export default function ExamsPage() {
           ))}
         </motion.div>
       )}
+
+      <ExamConflictDialog
+        open={showConflictDialog}
+        onOpenChange={setShowConflictDialog}
+        conflictData={conflictData}
+        onContinueExisting={handleContinueExisting}
+        onForceSubmit={handleForceSubmit}
+        isSubmitting={submitExam.isPending}
+      />
     </div>
   );
 }
@@ -172,6 +327,7 @@ function ExamCard({ exam, getExamTypeBadge, onStart }: ExamCardProps) {
     exam.last_attempt_status === "submitted" ||
     exam.last_attempt_status === "graded";
   const isInProgress = exam.last_attempt_status === "in_progress";
+  const isSubmittedPending = exam.last_attempt_status === "submitted";
 
   const score = exam.last_attempt_score ?? 0;
   const passed = isCompleted && score >= exam.passing_score;
@@ -297,19 +453,33 @@ function ExamCard({ exam, getExamTypeBadge, onStart }: ExamCardProps) {
                 </>
               )}
             </div>
-            {isCompleted &&
+            {isSubmittedPending ? (
+              <div className="flex items-center gap-1.5 text-orange-600">
+                <Loader2 className="size-4 animate-spin" />
+                <span className="font-medium">Đang chờ chấm điểm</span>
+              </div>
+            ) : (
+              isCompleted &&
               exam.recent_attempt_score != null &&
               exam.recent_attempt_score !== exam.last_attempt_score && (
                 <p className="text-xs text-muted-foreground/70">
                   Lần thử gần nhất: {Math.round(exam.recent_attempt_score)}% (
                   {formatRelativeTime(exam.recent_attempt_at)})
                 </p>
-              )}
+              )
+            )}
           </div>
         </CardContent>
 
         <CardFooter className="gap-2 pt-0">
-          {isCompleted ? (
+          {isSubmittedPending ? (
+            <div className="flex w-full items-center justify-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-4 py-3 text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400">
+              <Loader2 className="size-4 animate-spin" />
+              <span className="font-medium text-sm">
+                Bài đã nộp thành công. Hệ thống đang xử lý kết quả...
+              </span>
+            </div>
+          ) : isCompleted ? (
             <>
               <Button
                 onClick={handleViewResult}

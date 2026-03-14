@@ -14,6 +14,9 @@ import {
   Trash2,
   Calendar,
   Sparkles,
+  Lightbulb,
+  RefreshCw,
+  BookOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -35,10 +38,12 @@ import {
   usePublishExam,
   useUnpublishExam,
   useDeleteExam,
+  useRegenerateHints,
 } from "@/hooks/exam";
 import { MermaidRenderer } from "@/components/exam/mermaid-renderer";
 import { ExamSettingsEditor } from "@/components/admin/exam-settings-editor";
 import { ExamBasicInfoEditor } from "@/components/admin/exam-basic-info-editor";
+import { HintCatalogPreview } from "@/components/admin/hint-catalog-preview";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import type { ExamType } from "@/types";
@@ -62,6 +67,7 @@ export default function ExamDetailPage({ params }: PageProps) {
   const publishMutation = usePublishExam();
   const unpublishMutation = useUnpublishExam();
   const deleteMutation = useDeleteExam();
+  const { regenerate: regenerateHints, isRegenerating } = useRegenerateHints();
 
   const handlePublish = async () => {
     try {
@@ -94,6 +100,21 @@ export default function ExamDetailPage({ params }: PageProps) {
       router.push("/admin/exams");
     } catch {
       toast.error("Không thể xóa đề thi");
+    }
+  };
+
+  const handleRegenerateHints = async () => {
+    if (
+      !confirm(
+        "Gen lại toàn bộ hints cho đề thi này?\n\nHints đã mua bởi sinh viên sẽ KHÔNG bị thay đổi. Chỉ các lần mua hints SAU mới dùng nội dung mới.",
+      )
+    )
+      return;
+    try {
+      await regenerateHints(examId);
+      toast.success("Đã gen lại hints thành công!");
+    } catch {
+      toast.error("Không thể gen lại hints");
     }
   };
 
@@ -214,6 +235,17 @@ export default function ExamDetailPage({ params }: PageProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRegenerateHints}
+            disabled={isRegenerating}
+            className="cursor-pointer transition-all duration-200 hover:border-primary/50 hover:text-primary"
+          >
+            <RefreshCw
+              className={`mr-2 size-4 ${isRegenerating ? "animate-spin" : ""}`}
+            />
+            {isRegenerating ? "Đang gen..." : "Gen lại Hints"}
+          </Button>
           {exam.is_published ? (
             <Button
               variant="outline"
@@ -274,6 +306,24 @@ export default function ExamDetailPage({ params }: PageProps) {
               >
                 <TestTube className="mr-2 size-4" />
                 Phần Testing
+              </TabsTrigger>
+            )}
+            {exam.exam_data?.hints_catalog && (
+              <TabsTrigger
+                value="hints"
+                className="cursor-pointer data-[state=active]:bg-background"
+              >
+                <Lightbulb className="mr-2 size-4" />
+                Gợi ý (Hints)
+              </TabsTrigger>
+            )}
+            {exam.exam_data?.model_answers && (
+              <TabsTrigger
+                value="answers"
+                className="cursor-pointer data-[state=active]:bg-background"
+              >
+                <BookOpen className="mr-2 size-4" />
+                Đáp án mẫu
               </TabsTrigger>
             )}
           </TabsList>
@@ -420,6 +470,246 @@ export default function ExamDetailPage({ params }: PageProps) {
                   </p>
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {/* Hints Tab */}
+          {exam.exam_data?.hints_catalog && (
+            <TabsContent value="hints" className="space-y-6">
+              <HintCatalogPreview hintsCatalog={exam.exam_data.hints_catalog} />
+            </TabsContent>
+          )}
+
+          {/* Model Answers Tab */}
+          {exam.exam_data?.model_answers && (
+            <TabsContent value="answers" className="space-y-6">
+              {/* SQL Model Answers */}
+              {exam.exam_data.model_answers.sql_part && (
+                <Card className="overflow-hidden border-0 shadow-sm">
+                  <CardHeader className="border-b bg-muted/30">
+                    <CardTitle className="flex items-center gap-2 text-base font-medium">
+                      <Database className="size-4 text-primary" />
+                      Đáp án SQL
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 pt-4">
+                    {exam.exam_data.model_answers.sql_part
+                      .question_1_answer && (
+                      <div>
+                        <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
+                          Câu 1
+                        </h4>
+                        <pre className="overflow-x-auto rounded-lg bg-zinc-950 p-4 text-sm text-zinc-100">
+                          <code>
+                            {
+                              exam.exam_data.model_answers.sql_part
+                                .question_1_answer
+                            }
+                          </code>
+                        </pre>
+                      </div>
+                    )}
+                    {exam.exam_data.model_answers.sql_part
+                      .question_2_answer && (
+                      <div>
+                        <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
+                          Câu 2
+                        </h4>
+                        <pre className="overflow-x-auto rounded-lg bg-zinc-950 p-4 text-sm text-zinc-100">
+                          <code>
+                            {
+                              exam.exam_data.model_answers.sql_part
+                                .question_2_answer
+                            }
+                          </code>
+                        </pre>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Testing Model Answers */}
+              {exam.exam_data.model_answers.testing_part && (
+                <div className="space-y-6">
+                  {/* Technique & Reasoning */}
+                  <Card className="overflow-hidden border-0 shadow-sm">
+                    <CardHeader className="border-b bg-muted/30">
+                      <CardTitle className="flex items-center gap-2 text-base font-medium">
+                        <TestTube className="size-4 text-primary" />
+                        Kỹ thuật kiểm thử kỳ vọng
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pt-4">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
+                          {
+                            exam.exam_data.model_answers.testing_part
+                              .expected_technique
+                          }
+                        </Badge>
+                      </div>
+                      {exam.exam_data.model_answers.testing_part
+                        .technique_reasoning && (
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {
+                            exam.exam_data.model_answers.testing_part
+                              .technique_reasoning
+                          }
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Equivalence Classes */}
+                  {exam.exam_data.model_answers.testing_part
+                    .equivalence_classes && (
+                    <Card className="overflow-hidden border-0 shadow-sm">
+                      <CardHeader className="border-b bg-muted/30">
+                        <CardTitle className="text-base font-medium">
+                          Lớp tương đương / Giá trị biên
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <div className="space-y-2">
+                          {exam.exam_data.model_answers.testing_part.equivalence_classes.map(
+                            (ec, index) => (
+                              <div
+                                key={index}
+                                className="whitespace-pre-wrap rounded-lg border bg-muted/30 p-3 text-sm text-foreground"
+                              >
+                                {ec}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Expected Test Cases */}
+                  {exam.exam_data.model_answers.testing_part
+                    .expected_test_cases && (
+                    <Card className="overflow-hidden border-0 shadow-sm">
+                      <CardHeader className="border-b bg-muted/30">
+                        <CardTitle className="text-base font-medium">
+                          Test Cases mẫu (
+                          {
+                            exam.exam_data.model_answers.testing_part
+                              .expected_test_cases.length
+                          }
+                          )
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                              <TableHead className="w-[70px] font-semibold text-foreground">
+                                TC_ID
+                              </TableHead>
+                              <TableHead className="font-semibold text-foreground">
+                                Mô tả
+                              </TableHead>
+                              <TableHead className="font-semibold text-foreground">
+                                Input
+                              </TableHead>
+                              <TableHead className="font-semibold text-foreground">
+                                Expected Output
+                              </TableHead>
+                              <TableHead className="w-[100px] font-semibold text-foreground">
+                                Loại
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {exam.exam_data.model_answers.testing_part.expected_test_cases.map(
+                              (tc) => (
+                                <TableRow
+                                  key={tc.tc_id}
+                                  className="transition-colors duration-150 hover:bg-muted/50"
+                                >
+                                  <TableCell className="font-mono text-xs">
+                                    {tc.tc_id}
+                                  </TableCell>
+                                  <TableCell className="text-foreground">
+                                    {tc.description}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs text-foreground">
+                                    {tc.input}
+                                  </TableCell>
+                                  <TableCell className="text-foreground">
+                                    {tc.expected_output}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant="outline"
+                                      className={
+                                        tc.type === "Valid"
+                                          ? "border-green-200 bg-green-50 text-green-700"
+                                          : tc.type === "Boundary"
+                                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                                            : "border-red-200 bg-red-50 text-red-700"
+                                      }
+                                    >
+                                      {tc.type}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ),
+                            )}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Coverage Requirements */}
+                  {exam.exam_data.model_answers.testing_part
+                    .coverage_requirements && (
+                    <Card className="overflow-hidden border-0 shadow-sm">
+                      <CardHeader className="border-b bg-muted/30">
+                        <CardTitle className="text-base font-medium">
+                          Yêu cầu Coverage
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <div className="flex gap-4">
+                          <div className="rounded-lg border bg-green-50 px-4 py-2 text-center">
+                            <p className="text-2xl font-bold text-green-700">
+                              {
+                                exam.exam_data.model_answers.testing_part
+                                  .coverage_requirements.min_valid_cases
+                              }
+                            </p>
+                            <p className="text-xs text-green-600">Min Valid</p>
+                          </div>
+                          <div className="rounded-lg border bg-red-50 px-4 py-2 text-center">
+                            <p className="text-2xl font-bold text-red-700">
+                              {
+                                exam.exam_data.model_answers.testing_part
+                                  .coverage_requirements.min_invalid_cases
+                              }
+                            </p>
+                            <p className="text-xs text-red-600">Min Invalid</p>
+                          </div>
+                          <div className="rounded-lg border bg-amber-50 px-4 py-2 text-center">
+                            <p className="text-2xl font-bold text-amber-700">
+                              {
+                                exam.exam_data.model_answers.testing_part
+                                  .coverage_requirements.min_boundary_cases
+                              }
+                            </p>
+                            <p className="text-xs text-amber-600">
+                              Min Boundary
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
             </TabsContent>
           )}
         </Tabs>

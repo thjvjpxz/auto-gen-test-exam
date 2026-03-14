@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SaveIndicator } from "./save-indicator";
+import { CoinBadge } from "@/components/progression/coin-badge";
 import { useExamAttemptStore } from "@/stores/exam-attempt";
 import { fadeInDown, fadeInScale } from "@/lib/motion";
 
@@ -83,6 +84,8 @@ export function ExamHeader({
           <Timer className={cn("size-5", isUrgent && "animate-pulse")} />
           <span className="tabular-nums">{formattedTime}</span>
         </div>
+
+        <CoinBadge variant="compact" className="hidden sm:flex" />
 
         <div className="flex items-center gap-3 sm:gap-4">
           <SaveIndicator />

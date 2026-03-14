@@ -35,128 +35,6 @@ export interface User {
   updatedAt?: string;
 }
 
-export interface SqlQuestion {
-  id: number;
-  question: string;
-  maxScore: number;
-}
-
-export interface SqlPart {
-  mermaidCode: string;
-  questions: SqlQuestion[];
-}
-
-export interface RuleTableRow {
-  condition: string;
-  result: string;
-}
-
-export interface TestingPart {
-  scenario: string;
-  rulesTable: RuleTableRow[];
-  question: string;
-  maxScore: number;
-}
-
-export interface ExamDataJson {
-  sqlPart?: SqlPart;
-  testingPart?: TestingPart;
-}
-
-export interface ExamSettings {
-  allowReview: boolean;
-  showSampleSolution: boolean;
-  maxAttempts?: number;
-}
-
-export interface Exam {
-  id: number;
-  title: string;
-  examType: ExamType;
-  subject?: string;
-  teacherId: number;
-  duration: number;
-  passingScore: number;
-  examDataJson: ExamDataJson;
-  aiGenerated: boolean;
-  geminiModel?: string;
-  settingsJson?: ExamSettings;
-  isPublished: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface SqlAnswers {
-  [questionId: string]: string;
-}
-
-export interface TestCase {
-  input: string;
-  expectedOutput: string;
-  actualResult?: string;
-}
-
-export interface TestingAnswers {
-  technique: string;
-  explanation: string;
-  testCases: TestCase[];
-}
-
-export interface AnswersJson {
-  sqlPart?: SqlAnswers;
-  testingPart?: TestingAnswers;
-}
-
-export interface SqlQuestionGrading {
-  score: number;
-  maxScore: number;
-  feedback: string;
-  correctSyntax: boolean;
-  optimalQuery: boolean;
-  issues?: string[];
-  suggestions?: string[];
-}
-
-export interface TestingGrading {
-  techniqueScore: number;
-  testCasesScore: number;
-  coverageScore: number;
-  feedback: string;
-  missingScenarios?: string[];
-}
-
-export interface AiGradingJson {
-  sqlPart?: {
-    [questionId: string]: SqlQuestionGrading;
-  };
-  testingPart?: TestingGrading;
-  overallFeedback: string;
-}
-
-export interface ViolationLog {
-  type: ViolationType;
-  timestamp: string;
-  details?: string;
-}
-
-export interface ExamAttempt {
-  id: number;
-  examId: number;
-  studentId: number;
-  answersJson: AnswersJson;
-  score?: number;
-  maxScore: number;
-  percentage?: number;
-  aiGradingJson?: AiGradingJson;
-  tabSwitchCount: number;
-  violationLogs: ViolationLog[];
-  startedAt: string;
-  submittedAt?: string;
-  timeTaken?: number;
-  ipAddress?: string;
-  userAgent?: string;
-}
-
 // TokenResponse
 export interface TokenResponse {
   access_token: string;
@@ -244,6 +122,37 @@ export interface ExamData {
   title?: string;
   sql_part?: ExamSQLPart;
   testing_part?: ExamTestingPart;
+  model_answers?: {
+    sql_part?: {
+      question_1_answer?: string;
+      question_2_answer?: string;
+    };
+    testing_part?: {
+      expected_technique?: string;
+      technique_reasoning?: string;
+      equivalence_classes?: string[];
+      expected_test_cases?: Array<{
+        tc_id: string;
+        description: string;
+        input: string;
+        expected_output: string;
+        type: string;
+      }>;
+      coverage_requirements?: {
+        min_valid_cases: number;
+        min_invalid_cases: number;
+        min_boundary_cases: number;
+      };
+    };
+  };
+  hints_catalog?: {
+    [key: string]: Array<{
+      level: number;
+      cost: number;
+      preview: string;
+      content: string;
+    }>;
+  };
 }
 
 export interface ExamSettings {
@@ -359,6 +268,17 @@ export interface AttemptStartResponse {
   exam_data: ExamData;
 }
 
+/** Response when user tries to start exam while having active attempt on another exam (409 Conflict) */
+export interface ExamConflictResponse {
+  message: string;
+  existing_attempt_id: number;
+  existing_exam_id: number;
+  existing_exam_title: string;
+  started_at: string;
+  duration: number;
+  time_remaining_seconds: number;
+}
+
 /** Response from PATCH /attempts/{attempt_id}/save */
 export interface AttemptSaveResponse {
   id: number;
@@ -413,6 +333,8 @@ export interface AnswersPayload {
 export interface TestCaseItem {
   input: string;
   expected_output: string;
+  description?: string | null;
+  test_type?: string | null;
   actual_result?: string | null;
 }
 
@@ -447,6 +369,14 @@ export interface ExamSubmitResponse {
   flagged_for_review: boolean;
   grading: ExamGrading;
   submitted_answers?: SubmittedAnswers | null;
+  coin_reward?: number | null;
+  coin_balance_after?: number | null;
+  reward_breakdown?: {
+    base_reward: number;
+    performance_bonus?: number;
+    speed_bonus?: number;
+    perfect_score_bonus?: number;
+  } | null;
 }
 
 export interface ExamGrading {
@@ -512,4 +442,72 @@ export interface UserAttemptHistoryItem {
 export interface UserAttemptHistoryResponse {
   items: UserAttemptHistoryItem[];
   total: number;
+}
+
+// ========== GAMIFICATION TYPES ==========
+
+export interface UserProgression {
+  coin_balance: number;
+  lifetime_earned: number;
+  lifetime_spent: number;
+}
+
+export type CoinTransactionType = "exam_reward" | "hint_purchase";
+
+export interface CoinTransaction {
+  id: number;
+  type: CoinTransactionType;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  created_at: string;
+  meta?: {
+    exam_title?: string;
+    question_key?: string;
+    hint_level?: number;
+  };
+}
+
+export interface CoinTransactionListResponse {
+  transactions: CoinTransaction[];
+  total: number;
+}
+
+export interface HintCatalogItem {
+  level: number;
+  cost: number;
+  preview: string;
+  content?: string;
+  is_purchased: boolean;
+  is_locked: boolean;
+}
+
+export interface HintPurchaseRequest {
+  question_key: string;
+  hint_level: number;
+}
+
+export interface HintPurchaseResponse {
+  hint_content: string;
+  coin_spent: number;
+  new_balance: number;
+}
+
+export interface PurchasedHint {
+  question_key: string;
+  hint_level: number;
+  hint_content: string;
+  coin_cost: number;
+}
+
+export interface CoinRewardBreakdown {
+  base_reward: number;
+  score_bonus: number;
+  trust_bonus: number;
+  hint_penalty: number;
+}
+
+export interface CoinReward {
+  total_earned: number;
+  breakdown: CoinRewardBreakdown;
 }

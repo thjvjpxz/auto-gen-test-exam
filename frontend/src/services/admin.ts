@@ -53,7 +53,24 @@ export interface UserDetailOut {
   total_exams_taken: number;
   average_score: number | null;
   pass_rate: number | null;
+  coin_balance: number;
   recent_attempts: UserExamHistoryItem[];
+}
+
+export interface AdminCoinAdjustmentRequest {
+  amount: number;
+  reason: string;
+}
+
+export interface AdminCoinAdjustmentResponse {
+  user_id: number;
+  balance_before: number;
+  balance_after: number;
+  adjustment_amount: number;
+  reason: string;
+  adjusted_by_admin_id: number;
+  adjusted_by_admin_name: string;
+  adjusted_at: string;
 }
 
 export interface UserUpdateRequest {
@@ -85,6 +102,24 @@ export interface AdminAttemptListResponse {
   total: number;
   skip: number;
   limit: number;
+}
+
+export interface AdminRegradeResponse {
+  attempt_id: number;
+  status: string;
+  score: number | null;
+  message: string;
+}
+
+export interface AdminBatchRegradeRequest {
+  attempt_ids?: number[];
+  status_filter?: string;
+}
+
+export interface AdminBatchRegradeResponse {
+  success_count: number;
+  failed_count: number;
+  results: AdminRegradeResponse[];
 }
 
 export interface UserListParams {
@@ -165,6 +200,37 @@ export const adminService = {
     const response = await api.get<AdminAttemptListResponse>(
       `${ADMIN_API_BASE}/attempts`,
       { params },
+    );
+    return response.data;
+  },
+
+  /**
+   * Adjust user coin balance (admin only)
+   */
+  async adjustUserCoins(
+    userId: number,
+    data: AdminCoinAdjustmentRequest,
+  ): Promise<AdminCoinAdjustmentResponse> {
+    const response = await api.patch<AdminCoinAdjustmentResponse>(
+      `${ADMIN_API_BASE}/users/${userId}/coins`,
+      data,
+    );
+    return response.data;
+  },
+
+  async regradeAttempt(attemptId: number): Promise<AdminRegradeResponse> {
+    const response = await api.post<AdminRegradeResponse>(
+      `${ADMIN_API_BASE}/attempts/${attemptId}/regrade`,
+    );
+    return response.data;
+  },
+
+  async regradeBatch(
+    data: AdminBatchRegradeRequest,
+  ): Promise<AdminBatchRegradeResponse> {
+    const response = await api.post<AdminBatchRegradeResponse>(
+      `${ADMIN_API_BASE}/attempts/regrade-batch`,
+      data,
     );
     return response.data;
   },

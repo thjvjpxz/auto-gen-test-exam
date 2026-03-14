@@ -17,7 +17,7 @@ interface AuthProviderProps {
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
-  const { logout, setUser, setLoading, isAuthenticated } = useAuthStore();
+  const { logout, setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     syncUserFromCookie();
-  }, []);
+  }, [logout, setLoading, setUser]);
 
   return <>{children}</>;
 }

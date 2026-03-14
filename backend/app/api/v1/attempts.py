@@ -1,12 +1,13 @@
 """Exam attempt API endpoints for starting, saving, submitting, and viewing results."""
 
+import logging
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, HTTPException, Path, Query, Request, status
 from sqlalchemy import func, select
 
-from app.api.deps import DbSessionDep, get_current_user
+from app.api.deps import AdminUser, CurrentUser, DbSessionDep
 from app.models.attempt import AttemptStatus, ExamAttempt
 from app.models.exam import Exam
 from app.models.user import User, UserRole
@@ -18,6 +19,7 @@ from app.schemas.attempt import (
     AttemptSaveRequest,
     AttemptStartResponse,
     AttemptSubmitRequest,
+    ExamConflictResponse,
     UserAttemptHistoryItem,
     UserAttemptHistoryResponse,
     ViolationLogRequest,
@@ -25,32 +27,13 @@ from app.schemas.attempt import (
 )
 from app.schemas.exam import ExamDataOut
 from app.schemas.grading import AttemptResultOut, GradingResult, SubmittedAnswers
-from app.services.grading_service import GradingService
+from app.services.coin_reward_service import CoinRewardService
+from app.services.grading_service import get_grading_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["attempts"])
 
-# Type aliases
-CurrentUser = Annotated[User, Depends(get_current_user)]
-
-
-async def require_admin(current_user: CurrentUser) -> User:
-    """Dependency to ensure user is an admin.
-
-    Args:
-        current_user: The authenticated user.
-
-    Returns:
-        User if admin, raises HTTPException otherwise.
-
-    Raises:
-        HTTPException: If user is not an admin.
-    """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Chỉ admin mới có quyền thực hiện thao tác này",
-        )
-    return current_user
 
 
 # =============================================================================
@@ -179,6 +162,46 @@ async def start_exam_attempt(
                 detail=f"Bạn đã sử dụng hết {max_attempts} lượt làm bài cho đề thi này",
             )
 
+    global_progress_stmt = (
+        select(ExamAttempt, Exam)
+        .join(Exam, ExamAttempt.exam_id == Exam.id)
+        .where(ExamAttempt.user_id == current_user.id)
+        .where(ExamAttempt.status == AttemptStatus.IN_PROGRESS)
+        .order_by(ExamAttempt.started_at.desc())
+    )
+    global_progress_result = await db.execute(global_progress_stmt)
+    global_attempt_row = global_progress_result.first()
+
+    if global_attempt_row:
+        global_attempt, global_exam = global_attempt_row
+        
+        if global_attempt.exam_id != exam_id:
+            started_at = global_attempt.started_at
+            if started_at.tzinfo is None:
+                started_at = started_at.replace(tzinfo=timezone.utc)
+            
+            now = datetime.now(timezone.utc)
+            elapsed_seconds = int((now - started_at).total_seconds())
+            duration_seconds = global_exam.duration * 60
+            time_remaining = max(0, duration_seconds - elapsed_seconds)
+            
+            
+            conflict_data = ExamConflictResponse(
+                message=f"Bạn đang làm bài thi '{global_exam.title}'. Vui lòng hoàn thành hoặc hủy bỏ trước khi bắt đầu bài thi mới.",
+                existing_attempt_id=global_attempt.id,
+                existing_exam_id=global_exam.id,
+                existing_exam_title=global_exam.title,
+                started_at=started_at,
+                duration=global_exam.duration,
+                time_remaining_seconds=time_remaining,
+            )
+            
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=conflict_data.model_dump(),
+            )
+
+
     # Check for existing in-progress attempt
     existing_stmt = (
         select(ExamAttempt)
@@ -213,7 +236,7 @@ async def start_exam_attempt(
             answers_payload = AnswersPayload(**current_answers)
             
             try:
-                grading_service = GradingService()
+                grading_service = get_grading_service()
                 grading_result = await grading_service.grade_attempt(
                     exam_data=exam.exam_data_json,
                     answers=answers_payload,
@@ -425,51 +448,88 @@ async def submit_exam_attempt(
 
     # Grade the attempt
     try:
-        grading_service = GradingService()
+        grading_service = get_grading_service()
         grading_result = await grading_service.grade_attempt(
             exam_data=exam.exam_data_json,
             answers=request.answers,
             passing_score=exam.passing_score,
         )
+        
+        attempt.score = grading_result.total_score
+        attempt.max_score = grading_result.max_score
+        attempt.percentage = grading_result.percentage
+        attempt.ai_grading_json = grading_result.model_dump()
+        attempt.status = AttemptStatus.GRADED
+
+        await db.commit()
+        await db.refresh(attempt)
+
+        coin_reward_service = CoinRewardService(db)
+        reward_data = await coin_reward_service.grant_reward(attempt.id)
+        
+        await db.commit()
+
+        violation_count = attempt.get_total_violation_count()
+
+        return AttemptResultOut(
+            attempt_id=attempt.id,
+            exam_id=exam.id,
+            exam_title=exam.title,
+            user_id=attempt.user_id,
+            started_at=attempt.started_at.isoformat(),
+            submitted_at=attempt.submitted_at.isoformat() if attempt.submitted_at else None,
+            time_taken=attempt.time_taken,
+            score=attempt.score,
+            max_score=attempt.max_score,
+            percentage=attempt.percentage or 0,
+            passed=grading_result.passed,
+            trust_score=attempt.trust_score,
+            violation_count=violation_count,
+            flagged_for_review=attempt.trust_score < 50,
+            grading=grading_result,
+            submitted_answers=SubmittedAnswers(
+                sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
+                testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
+            ),
+            coin_reward=reward_data.get("coin_reward"),
+            coin_balance_after=reward_data.get("coin_balance_after"),
+            reward_breakdown=reward_data.get("reward_breakdown"),
+        )
+        
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi chấm điểm: {str(e)}",
-        ) from e
+        logger.error(f"Grading failed after retries: {e}")
+        
+        attempt.status = AttemptStatus.SUBMITTED
+        await db.commit()
+        await db.refresh(attempt)
+        
+        violation_count = attempt.get_total_violation_count()
+        
+        return AttemptResultOut(
+            attempt_id=attempt.id,
+            exam_id=exam.id,
+            exam_title=exam.title,
+            user_id=attempt.user_id,
+            started_at=attempt.started_at.isoformat(),
+            submitted_at=attempt.submitted_at.isoformat() if attempt.submitted_at else None,
+            time_taken=attempt.time_taken,
+            score=0.0,
+            max_score=100.0,
+            percentage=0.0,
+            passed=False,
+            trust_score=attempt.trust_score,
+            violation_count=violation_count,
+            flagged_for_review=attempt.trust_score < 50,
+            grading=None,
+            submitted_answers=SubmittedAnswers(
+                sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
+                testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
+            ),
+            coin_reward=None,
+            coin_balance_after=None,
+            reward_breakdown=None,
+        )
 
-    # Update attempt with grading results
-    attempt.score = grading_result.total_score
-    attempt.max_score = grading_result.max_score
-    attempt.percentage = grading_result.percentage
-    attempt.ai_grading_json = grading_result.model_dump()
-    attempt.status = AttemptStatus.GRADED
-
-    await db.commit()
-    await db.refresh(attempt)
-
-    violation_count = attempt.get_total_violation_count()
-
-    return AttemptResultOut(
-        attempt_id=attempt.id,
-        exam_id=exam.id,
-        exam_title=exam.title,
-        user_id=attempt.user_id,
-        started_at=attempt.started_at.isoformat(),
-        submitted_at=attempt.submitted_at.isoformat() if attempt.submitted_at else None,
-        time_taken=attempt.time_taken,
-        score=attempt.score,
-        max_score=attempt.max_score,
-        percentage=attempt.percentage or 0,
-        passed=grading_result.passed,
-        trust_score=attempt.trust_score,
-        violation_count=violation_count,
-        flagged_for_review=attempt.trust_score < 50,
-        grading=grading_result,
-        submitted_answers=SubmittedAnswers(
-            sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
-            testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
-        ),
-    )
 
 
 # =============================================================================
@@ -539,6 +599,38 @@ async def get_attempt_result(
 
     violation_count = attempt.get_total_violation_count()
 
+
+    coin_reward = None
+    coin_balance_after = None
+    reward_breakdown = None
+    
+    if attempt.status == AttemptStatus.GRADED:
+        from app.models.coin_transaction import CoinTransaction, TransactionType
+        from app.models.wallet import UserWallet
+        
+        coin_tx_stmt = (
+            select(CoinTransaction)
+            .filter_by(
+                user_id=attempt.user_id,
+                attempt_id=attempt.id,
+                type=TransactionType.REWARD,
+            )
+            .order_by(CoinTransaction.created_at.desc())
+            .limit(1)
+        )
+        coin_tx_result = await db.execute(coin_tx_stmt)
+        coin_transaction = coin_tx_result.scalar_one_or_none()
+        
+        if coin_transaction:
+            coin_reward = coin_transaction.amount
+            reward_breakdown = coin_transaction.meta_json.get("breakdown")
+            
+            wallet_stmt = select(UserWallet).filter_by(user_id=attempt.user_id)
+            wallet_result = await db.execute(wallet_stmt)
+            wallet = wallet_result.scalar_one_or_none()
+            if wallet:
+                coin_balance_after = wallet.coin_balance
+
     return AttemptResultOut(
         attempt_id=attempt.id,
         exam_id=exam.id,
@@ -559,6 +651,9 @@ async def get_attempt_result(
             sql_part=attempt.answers_json.get("sql_part") if attempt.answers_json else None,
             testing_part=attempt.answers_json.get("testing_part") if attempt.answers_json else None,
         ),
+        coin_reward=coin_reward,
+        coin_balance_after=coin_balance_after,
+        reward_breakdown=reward_breakdown,
     )
 
 
@@ -575,7 +670,7 @@ async def get_attempt_result(
 async def list_exam_attempts(
     exam_id: Annotated[int, Path(gt=0, description="ID của đề thi")],
     db: DbSessionDep,
-    current_user: Annotated[User, Depends(require_admin)],
+    current_user: AdminUser,
     skip: Annotated[int, Query(ge=0, description="Số lượng bỏ qua")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Số lượng tối đa")] = 20,
     status_filter: Annotated[AttemptStatus | None, Query(alias="status")] = None,

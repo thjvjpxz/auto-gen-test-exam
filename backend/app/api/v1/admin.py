@@ -1,17 +1,23 @@
 """Admin API endpoints for user management, stats, and attempts overview."""
 
+import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, HTTPException, Path, Query, status
 from sqlalchemy import func, select
 
-from app.api.deps import DbSessionDep, get_current_user
+from app.api.deps import AdminUser, DbSessionDep
 from app.models.attempt import AttemptStatus, ExamAttempt
 from app.models.exam import Exam
 from app.models.user import User, UserRole
 from app.schemas.admin import (
     AdminAttemptListOut,
     AdminAttemptListResponse,
+    AdminBatchRegradeRequest,
+    AdminBatchRegradeResponse,
+    AdminCoinAdjustmentRequest,
+    AdminCoinAdjustmentResponse,
+    AdminRegradeResponse,
     AdminStatsOut,
     UserDetailOut,
     UserExamHistoryItem,
@@ -20,32 +26,11 @@ from app.schemas.admin import (
     UserUpdateRequest,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
 
-
-def require_admin(current_user: CurrentUser) -> User:
-    """Dependency to ensure user is an admin.
-
-    Args:
-        current_user: The authenticated user.
-
-    Returns:
-        User if admin, raises HTTPException otherwise.
-
-    Raises:
-        HTTPException: If user is not an admin.
-    """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return current_user
-
-
-AdminUser = Annotated[User, Depends(require_admin)]
 
 
 @router.get("/stats", response_model=AdminStatsOut)
@@ -213,6 +198,10 @@ async def get_user_detail(
             )
         )
 
+    from app.services.wallet_service import WalletService
+    wallet_service = WalletService(db)
+    coin_balance = await wallet_service.get_balance(user_id)
+
     return UserDetailOut(
         id=user.id,
         email=user.email,
@@ -225,6 +214,7 @@ async def get_user_detail(
         total_exams_taken=total_exams_taken,
         average_score=average_score,
         pass_rate=pass_rate,
+        coin_balance=coin_balance,
         recent_attempts=recent_attempts,
     )
 
@@ -353,3 +343,161 @@ async def list_all_attempts(
         )
 
     return AdminAttemptListResponse(items=items, total=total, skip=skip, limit=limit)
+
+
+@router.patch("/users/{user_id}/coins", response_model=AdminCoinAdjustmentResponse)
+async def adjust_user_coins(
+    user_id: Annotated[int, Path(gt=0)],
+    request: AdminCoinAdjustmentRequest,
+    db: DbSessionDep,
+    current_user: AdminUser,
+) -> AdminCoinAdjustmentResponse:
+    """Adjust user coin balance (admin only).
+    
+    Args:
+        user_id: User ID to adjust coins for.
+        request: Adjustment details (amount and reason).
+        
+    Returns:
+        AdminCoinAdjustmentResponse with adjustment details.
+        
+    Raises:
+        HTTPException: If user not found.
+    """
+    user = (await db.execute(
+        select(User).where(User.id == user_id, User.is_deleted == False)  # noqa: E712
+    )).scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    from app.models.coin_transaction import TransactionType
+    from app.services.wallet_service import WalletService
+    from datetime import datetime, timezone
+    
+    wallet_service = WalletService(db)
+    
+    balance_before = await wallet_service.get_balance(user_id)
+    
+    meta = {
+        "reason": request.reason,
+        "admin_id": current_user.id,
+        "admin_name": current_user.name,
+        "admin_email": current_user.email,
+    }
+    
+    transaction = await wallet_service.add_transaction(
+        user_id=user_id,
+        amount=request.amount,
+        transaction_type=TransactionType.ADJUSTMENT,
+        meta=meta,
+    )
+    
+    await db.commit()
+    
+    return AdminCoinAdjustmentResponse(
+        user_id=user_id,
+        balance_before=balance_before,
+        balance_after=transaction.balance_after,
+        adjustment_amount=request.amount,
+        reason=request.reason,
+        adjusted_by_admin_id=current_user.id,
+        adjusted_by_admin_name=current_user.name,
+        adjusted_at=datetime.now(timezone.utc),
+    )
+
+
+@router.post("/attempts/{attempt_id}/regrade", response_model=AdminRegradeResponse)
+async def regrade_attempt(
+    attempt_id: Annotated[int, Path(description="Attempt ID to re-grade")],
+    db: DbSessionDep,
+    current_user: AdminUser,
+) -> AdminRegradeResponse:
+    """Re-grade a single attempt (admin only).
+
+    Re-grades attempts with status SUBMITTED or GRADED.
+    Grants coin reward if not already rewarded.
+
+    Args:
+        attempt_id: ID of attempt to re-grade.
+        db: Database session.
+        current_user: Current admin user.
+
+    Returns:
+        AdminRegradeResponse with result.
+
+    Raises:
+        HTTPException: If attempt not found or cannot be re-graded.
+    """
+    from app.api.v1.admin_regrade_helper import regrade_single_attempt
+    
+    return await regrade_single_attempt(db, attempt_id)
+
+
+@router.post("/attempts/regrade-batch", response_model=AdminBatchRegradeResponse)
+async def regrade_batch(
+    request: AdminBatchRegradeRequest,
+    db: DbSessionDep,
+    current_user: AdminUser,
+) -> AdminBatchRegradeResponse:
+    """Re-grade multiple attempts in batch (admin only).
+
+    Processes attempts sequentially to avoid Gemini API rate limits.
+
+    Args:
+        request: Batch re-grade request with attempt IDs or status filter.
+        db: Database session.
+        current_user: Current admin user.
+
+    Returns:
+        AdminBatchRegradeResponse with success/failed counts and details.
+    """
+    from app.api.v1.admin_regrade_helper import regrade_single_attempt
+    
+    if request.attempt_ids:
+        attempt_ids = request.attempt_ids
+    elif request.status_filter:
+        result = await db.execute(
+            select(ExamAttempt.id).where(ExamAttempt.status == request.status_filter)
+        )
+        attempt_ids = [row[0] for row in result.all()]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must provide either attempt_ids or status_filter",
+        )
+
+    results: list[AdminRegradeResponse] = []
+    success_count = 0
+    failed_count = 0
+
+    for attempt_id in attempt_ids:
+        try:
+            result = await regrade_single_attempt(db, attempt_id)
+            results.append(result)
+            
+            if result.status == AttemptStatus.GRADED:
+                success_count += 1
+            else:
+                failed_count += 1
+                
+        except Exception as e:
+            logger.error(f"Failed to re-grade attempt {attempt_id}: {e}")
+            results.append(
+                AdminRegradeResponse(
+                    attempt_id=attempt_id,
+                    status=AttemptStatus.SUBMITTED,
+                    score=None,
+                    message=f"Error: {str(e)}",
+                )
+            )
+            failed_count += 1
+
+    return AdminBatchRegradeResponse(
+        success_count=success_count,
+        failed_count=failed_count,
+        results=results,
+    )

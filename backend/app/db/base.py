@@ -23,9 +23,10 @@ class TimestampMixin:
         default=_utc_now,
         nullable=False,
     )
-    updated_at: Mapped[datetime | None] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime,
+        default=_utc_now,
         onupdate=_utc_now,
-        nullable=True,
+        nullable=False,
     )
 

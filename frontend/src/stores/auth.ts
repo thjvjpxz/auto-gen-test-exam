@@ -32,8 +32,8 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, isAuthenticated: false });
       },
 
-      clearAuth: function () {
-        this.logout();
+      clearAuth: () => {
+        set({ user: null, isAuthenticated: false });
       },
     }),
     {

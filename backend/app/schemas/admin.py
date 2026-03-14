@@ -65,6 +65,7 @@ class UserDetailOut(BaseModel):
     total_exams_taken: int = 0
     average_score: float | None = None
     pass_rate: float | None = None
+    coin_balance: int = 0
 
     recent_attempts: list[UserExamHistoryItem] = Field(default_factory=list)
 
@@ -113,7 +114,68 @@ class AdminAttemptListOut(BaseModel):
 class AdminAttemptListResponse(BaseModel):
     """Paginated attempts list for admin."""
 
+
     items: list[AdminAttemptListOut]
     total: int
     skip: int
     limit: int
+
+
+class AdminCoinAdjustmentRequest(BaseModel):
+    """Request schema for admin coin adjustment."""
+
+    amount: int = Field(
+        ...,
+        ge=-10000,
+        le=10000,
+        description="Coin amount to adjust (positive to add, negative to deduct)",
+    )
+    reason: str = Field(
+        ...,
+        min_length=3,
+        max_length=200,
+        description="Reason for adjustment",
+    )
+
+
+class AdminCoinAdjustmentResponse(BaseModel):
+    """Response schema for admin coin adjustment."""
+
+    user_id: int
+    balance_before: int
+    balance_after: int
+    adjustment_amount: int
+    reason: str
+    adjusted_by_admin_id: int
+    adjusted_by_admin_name: str
+    adjusted_at: datetime
+
+
+class AdminRegradeResponse(BaseModel):
+    """Response schema for single attempt re-grade."""
+
+    attempt_id: int
+    status: AttemptStatus
+    score: float | None
+    message: str
+
+
+class AdminBatchRegradeRequest(BaseModel):
+    """Request schema for batch re-grade."""
+
+    attempt_ids: list[int] | None = Field(
+        default=None,
+        description="Specific attempt IDs to re-grade. If None, uses status_filter.",
+    )
+    status_filter: AttemptStatus | None = Field(
+        default=AttemptStatus.SUBMITTED,
+        description="Re-grade all attempts with this status",
+    )
+
+
+class AdminBatchRegradeResponse(BaseModel):
+    """Response schema for batch re-grade."""
+
+    success_count: int
+    failed_count: int
+    results: list[AdminRegradeResponse]

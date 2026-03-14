@@ -15,7 +15,7 @@ from app.core.config import get_settings
 from app.models.exam import ExamType
 
 # Constants
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 GENERATION_TEMPERATURE = 1.0
 
 MASTER_PROMPT = """
@@ -62,7 +62,7 @@ Yêu cầu:
 
 ### 2. PHẦN TESTING - Kỹ thuật kiểm thử hộp đen
 
-**Bước 1: Chọn NGẪU NHIÊN một loại bài toán:**
+**Bước 1: Chọn NGẪU NHIÊN một loại bài toán (LUÂN PHIÊN BẮT BUỘC, xác suất 25% mỗi loại):**
 
 | Loại bài toán                | Kỹ thuật phù hợp                                      | Ví dụ nghiệp vụ                                               |
 |------------------------------|-------------------------------------------------------|--------------------------------------------------------------|
@@ -71,15 +71,32 @@ Yêu cầu:
 | Quy trình có trạng thái      | Chuyển đổi trạng thái (State Transition)              | Đơn hàng, Vé máy bay, Hồ sơ xin việc, Bug tracking           |
 | Nghiệp vụ tính toán          | EP + BVA + Bảng quyết định                            | Lãi suất tiết kiệm, Tính điểm thưởng member, Phí bảo hiểm    |
 
-**Bước 2: Thiết kế bài toán với:**
-- Mô tả ngữ cảnh nghiệp vụ rõ ràng (30-50 từ)
-- Bảng quy tắc (3-6 rules) hoặc sơ đồ trạng thái
-- Có số liệu cụ thể, thực tế (tiền tệ dùng VND, khoảng cách dùng km)
+**Bước 2: Thiết kế bài toán (60-100 từ) BẮT BUỘNG bao gồm:**
+- Mô tả ngữ cảnh nghiệp vụ rõ ràng, có chủ đề KHÁC BIỆT với phần SQL
+- Giá trị SỐ CỤ THỂ cho TẤT CẢ tham số (VD: "Phí cơ bản là 200,000 VND", KHÔNG viết "Giá gốc" hay "Phí cơ bản" mà không kèm con số)
+- Ranh giới RÕ RÀNG bằng toán tử (>=, >, <, <=). VD: "Tuổi >= 18" thay vì "từ 18 tuổi"
+- DOMAIN hợp lệ của mỗi input (VD: "Tuổi là số nguyên dương từ 0 đến 150")
+- Quy tắc ưu tiên nếu nhiều rules cùng thỏa mãn
 
-**Bước 3: Câu hỏi yêu cầu thí sinh:**
-- Xác định kỹ thuật kiểm thử phù hợp VÀ giải thích lý do
-- Liệt kê các lớp tương đương / giá trị biên / trạng thái / tổ hợp điều kiện
-- Thiết kế tối thiểu 5-10 test cases
+**QUY TẮC CHO rules_table:**
+- Cột "condition": PHẢI dùng toán tử rõ (>=, >, <, <=, ==). KHÔNG dùng "trên", "dưới", "khoảng"
+- Cột "result": PHẢI có giá trị SỐ cụ thể tính được (VD: "70,000 VND", "Phí = 200,000 * 1.5 = 300,000 VND")
+- Mỗi tổ hợp input hợp lệ PHẢI map tới ĐÚNG MỘT result (không mâu thuẫn)
+- Bảng PHẢI bao phủ TẤT CẢ trường hợp hợp lệ (không bỏ sót tổ hợp)
+
+**NẾU LOẠI BÀI TOÁN LÀ STATE TRANSITION:**
+- Thay vì bảng điều kiện-kết quả thông thường, rules_table mô tả các chuyển đổi trạng thái
+- Mỗi item có format: {"condition": "Trạng thái: X → Y | Sự kiện: Z", "result": "Điều kiện: ..."}
+- scenario PHẢI mô tả rõ: danh sách các trạng thái, sự kiện trigger, điều kiện chuyển
+- VD: "Đơn hàng có 5 trạng thái: Mới tạo, Đã xác nhận, Đang giao, Hoàn thành, Đã hủy..."
+
+**Bước 3: Câu hỏi yêu cầu thí sinh (PHẢI chia thành các sub-yêu cầu):**
+- Câu hỏi PHẢI có format sau:
+  "a) Xác định kỹ thuật kiểm thử hộp đen phù hợp nhất và giải thích lý do chọn kỹ thuật đó. (10 điểm)
+   b) Liệt kê các lớp tương đương / giá trị biên / trạng thái / tổ hợp điều kiện cho TỪNG biến input. (10 điểm)
+   c) Thiết kế tối thiểu 7 test cases theo bảng sau:
+      | TC_ID | Mô tả | Input | Expected Output | Loại (Valid/Invalid/Boundary) |
+      Bao gồm ít nhất 2 boundary values và 1 invalid case. (30 điểm)"
 
 ---
 
@@ -88,6 +105,7 @@ Yêu cầu:
 1. **Seed ngẫu nhiên**: Mỗi lần gọi, hãy chọn ngẫu nhiên: Nhóm lĩnh vực (1-10), Chủ đề cụ thể, Mức độ câu hỏi SQL, Loại bài toán Testing
 2. **Quy tắc chống lặp**: KHÔNG sử dụng các chủ đề quá phổ biến như: Quản lý thư viện, Quản lý sinh viên đơn thuần, Bán hàng đơn giản
 3. **Tính thực tiễn**: Số liệu và nghiệp vụ phải phản ánh thực tế Việt Nam
+4. **Testing KHÁC SQL**: Chủ đề bài Testing PHẢI KHÁC với chủ đề phần SQL
 
 ---
 
@@ -129,20 +147,122 @@ erDiagram
 
 ---
 
+## HINTS GENERATION
+
+Cho mỗi câu hỏi, tạo 3 hints theo cấp độ tăng dần:
+
+**Level 1 (5 coins)**: Gợi ý khái niệm hoặc hướng tiếp cận cơ bản
+- SQL: Đề cập đến các SQL clauses/functions cần dùng (JOIN, GROUP BY, WHERE, etc.)
+- Testing: Gợi ý kỹ thuật kiểm thử phù hợp (EP, BVA, Decision Table, State Transition)
+
+**Level 2 (8 coins)**: Hướng dẫn cụ thể hơn
+- SQL: Cung cấp cấu trúc query một phần hoặc điều kiện quan trọng
+- Testing: Liệt kê các lớp tương đương hoặc giá trị biên cần test
+
+**Level 3 (12 coins)**: Gần như là giải pháp hoàn chỉnh
+- SQL: Query hoàn chỉnh với một vài chỗ cần điền
+- Testing: Ví dụ test cases hoàn chỉnh với input và expected output
+
+Mỗi hint phải có:
+- level: 1, 2, hoặc 3
+- cost: 5, 8, hoặc 12 (tương ứng)
+- preview: Xem trước ngắn gọn 1 dòng (tối đa 50 ký tự)
+- content: Nội dung hint đầy đủ (giải thích chi tiết)
+
+**RÀNG BUỘC HINT (BẮT BUỘC):**
+- Hints PHẢI sử dụng DỮ LIỆU CỤ THỂ từ scenario và rules_table của đề đang tạo
+- TUYỆT ĐỐI KHÔNG sao chép giá trị từ ví dụ khác (về tuổi, vé xem phim, giảm giá, etc.)
+- Level 3 hint PHẢI có test cases với expected output TÍNH TOÁN ĐƯỢC từ rules_table
+- Nếu hint chứa giá trị KHÔNG tồn tại trong scenario hiện tại → INVALID, phải gen lại
+- Mỗi hint SQL PHẢI tham chiếu đến TÊN BẢNG và TÊN CỘT cụ thể từ ERD đã tạo
+
+---
+
+## MODEL ANSWERS (ĐÁP ÁN MẪU - DÙNG ĐỂ CHẤM ĐIỂM)
+
+Bạn PHẢI sinh đáp án mẫu cho TỪNG câu hỏi. Đáp án mẫu giúp hệ thống chấm điểm so sánh bài làm sinh viên. Yêu cầu:
+
+### SQL Model Answers:
+- Mỗi câu SQL phải có 1 query đúng, chạy được trên ERD đã thiết kế
+- Query phải đúng logic, cú pháp, và tối ưu
+- Nếu có nhiều cách viết đúng, chọn cách phổ biến nhất
+
+### Testing Model Answers:
+- expected_technique: Kỹ thuật kiểm thử chính xác nhất cho bài toán
+- technique_reasoning: Giải thích TẠI SAO kỹ thuật này phù hợp (2-3 câu)
+- equivalence_classes: Danh sách TẤT CẢ lớp tương đương / giá trị biên / trạng thái
+- expected_test_cases: Tối thiểu 8 test cases mẫu HOÀN CHỈNH, tính từ rules_table
+- coverage_requirements: Số lượng tối thiểu mỗi loại test case
+
+**RÀNG BUỘC NHÃN TEST CASE (BẮT BUỘC):**
+- Mỗi test case có type = CHÍNH XÁC 1 trong: "Valid", "Invalid", "Boundary"
+- Số test cases gắn nhãn "Valid" PHẢI >= min_valid_cases
+- Số test cases gắn nhãn "Invalid" PHẢI >= min_invalid_cases
+- Số test cases gắn nhãn "Boundary" PHẢI >= min_boundary_cases
+- Tổng test cases = Valid + Invalid + Boundary >= 8
+- SAU KHI TẠO XONG, hãy ĐẾM LẠI số lượng mỗi nhãn để đảm bảo đủ yêu cầu
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
-  "exam_title": "string - Tiêu đề cụ thể theo chủ đề, ví dụ: Đề thi CSDL & Kiểm thử - Hệ thống Quản lý Gym",
+  "exam_title": "string - Tiêu đề cụ thể theo chủ đề, ví dụ: Hệ thống Quản lý Gym",
   "sql_part": {
     "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh theo cú pháp trên",
     "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
   },
   "testing_part": {
-    "scenario": "string - Mô tả tình huống nghiệp vụ chi tiết",
+    "scenario": "string - Mô tả tình huống nghiệp vụ chi tiết 60-100 từ, có giá trị số cụ thể",
     "rules_table": [
-      {"condition": "string - Điều kiện", "result": "string - Kết quả"}
+      {"condition": "string - Điều kiện với toán tử rõ ràng (>=, <, etc.)", "result": "string - Kết quả có giá trị số cụ thể"}
     ],
-    "question": "string - Yêu cầu cụ thể cho thí sinh"
+    "question": "string - Yêu cầu chia thành a), b), c) như hướng dẫn trên"
+  },
+  "model_answers": {
+    "sql_part": {
+      "question_1_answer": "string - Câu SQL hoàn chỉnh, đúng cú pháp, chạy được trên ERD",
+      "question_2_answer": "string - Câu SQL hoàn chỉnh, đúng cú pháp, chạy được trên ERD"
+    },
+    "testing_part": {
+      "expected_technique": "string - EP/BVA/Decision Table/State Transition",
+      "technique_reasoning": "string - Giải thích 2-3 câu tại sao chọn kỹ thuật này",
+      "equivalence_classes": [
+        "string - Lớp tương đương / giá trị biên / trạng thái thứ 1",
+        "string - Lớp tương đương / giá trị biên / trạng thái thứ 2"
+      ],
+      "expected_test_cases": [
+        {
+          "tc_id": "TC01",
+          "description": "string - Mô tả test case",
+          "input": "string - Giá trị input cụ thể",
+          "expected_output": "string - Kết quả TÍNH TOÁN ĐƯỢC từ rules_table",
+          "type": "Valid|Invalid|Boundary"
+        }
+      ],
+      "coverage_requirements": {
+        "min_valid_cases": 4,
+        "min_invalid_cases": 2,
+        "min_boundary_cases": 2
+      }
+    }
+  },
+  "hints_catalog": {
+    "sql.question_1": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string - PHẢI dùng tên bảng/cột từ ERD"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string - PHẢI dùng tên bảng/cột từ ERD"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string - PHẢI dùng tên bảng/cột từ ERD"}
+    ],
+    "sql.question_2": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ],
+    "testing.question": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string - PHẢI dùng dữ liệu từ scenario"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string - PHẢI dùng dữ liệu từ scenario"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string - PHẢI có test cases tính từ rules_table"}
+    ]
   }
 }
 
@@ -150,6 +270,11 @@ erDiagram
 - KHÔNG trả về ví dụ mẫu, PHẢI sinh nội dung hoàn toàn mới
 - Mermaid code PHẢI tuân thủ cú pháp ở trên, KHÔNG dùng PRIMARY KEY(...) hay UNIQUE
 - Các con số trong bài Testing PHẢI nhất quán và tính toán được
+- PHẢI có đầy đủ hints cho tất cả câu hỏi (sql.question_1, sql.question_2, testing.question)
+- Hints PHẢI phù hợp với NỘI DUNG CỤ THỂ của đề, KHÔNG copy từ ví dụ mẫu
+- model_answers PHẢI chính xác và nhất quán với đề bài đã sinh
+- SQL model answers PHẢI chạy được trên ERD đã thiết kế
+- Testing expected_test_cases PHẢI có expected_output TÍNH TOÁN CHÍNH XÁC từ rules_table
 """
 
 # SQL-only prompt - generates only SQL part
@@ -218,6 +343,26 @@ TABLE {
 
 ---
 
+## HINTS GENERATION
+
+Cho mỗi câu hỏi SQL, tạo 3 hints theo cấp độ:
+- Level 1 (5 coins): Gợi ý về SQL clauses/functions cần dùng
+- Level 2 (8 coins): Cấu trúc query một phần hoặc điều kiện quan trọng
+- Level 3 (12 coins): Query hoàn chỉnh với một vài chỗ cần điền
+
+Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
+
+---
+
+## MODEL ANSWERS (ĐÁP ÁN MẪU)
+
+Bạn PHẢI sinh đáp án mẫu cho TỪNG câu hỏi SQL:
+- Mỗi câu SQL phải có 1 query đúng, chạy được trên ERD đã thiết kế
+- Query phải đúng logic, cú pháp, và tối ưu
+- Nếu có nhiều cách viết đúng, chọn cách phổ biến nhất
+
+---
+
 ## OUTPUT FORMAT (JSON)
 
 {
@@ -226,10 +371,31 @@ TABLE {
     "mermaid_code": "string - Code Mermaid erDiagram hoàn chỉnh theo cú pháp trên",
     "questions": ["string - Câu hỏi SQL 1", "string - Câu hỏi SQL 2"]
   },
-  "testing_part": null
+  "testing_part": null,
+  "model_answers": {
+    "sql_part": {
+      "question_1_answer": "string - Câu SQL hoàn chỉnh, đúng cú pháp, chạy được trên ERD",
+      "question_2_answer": "string - Câu SQL hoàn chỉnh, đúng cú pháp, chạy được trên ERD"
+    },
+    "testing_part": null
+  },
+  "hints_catalog": {
+    "sql.question_1": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ],
+    "sql.question_2": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string"}
+    ]
+  }
 }
 
-**LƯU Ý:** Mermaid code PHẢI tuân thủ cú pháp ở trên. KHÔNG dùng PRIMARY KEY(...), UNIQUE, CONSTRAINT.
+**LƯU Ý:**
+- PHẢI có đầy đủ hints cho tất cả câu hỏi SQL
+- SQL model answers PHẢI chạy được trên ERD đã thiết kế
 """
 
 # Testing-only prompt - generates only Testing part
@@ -238,19 +404,72 @@ Bạn là một chuyên gia soạn đề thi CNTT với 20 năm kinh nghiệm. N
 
 ## PHẦN TESTING - Kỹ thuật kiểm thử hộp đen
 
-**Bước 1: Chọn NGẪU NHIÊN một loại bài toán:**
+**Bước 1: Chọn NGẪU NHIÊN một loại bài toán (LUÂN PHIÊN BẮT BUỘC, xác suất 25% mỗi loại):**
 - Phân loại theo điều kiện số: Phân vùng tương đương (EP) + Giá trị biên (BVA)
 - Kết hợp nhiều điều kiện: Bảng quyết định (Decision Table)
 - Quy trình có trạng thái: Chuyển đổi trạng thái (State Transition)
+- Nghiệp vụ tính toán: EP + BVA + Bảng quyết định
 
-**Bước 2: Thiết kế bài toán với:**
-- Mô tả ngữ cảnh nghiệp vụ rõ ràng (30-50 từ)
-- Bảng quy tắc (3-6 rules) hoặc sơ đồ trạng thái
-- Có số liệu cụ thể, thực tế (VND, km)
+**Bước 2: Thiết kế bài toán (60-100 từ) BẮT BUỘC bao gồm:**
+- Mô tả ngữ cảnh nghiệp vụ rõ ràng
+- Giá trị SỐ CỤ THỂ cho TẤT CẢ tham số (VD: "Phí cơ bản là 200,000 VND")
+- Ranh giới RÕ RÀNG bằng toán tử (>=, >, <, <=)
+- DOMAIN hợp lệ của mỗi input
+- Quy tắc ưu tiên nếu nhiều rules cùng thỏa mãn
 
-**Bước 3: Câu hỏi yêu cầu thí sinh:**
-- Xác định kỹ thuật kiểm thử phù hợp và giải thích lý do
-- Thiết kế tối thiểu 5-10 test cases
+**QUY TẮC CHO rules_table:**
+- "condition": PHẢI dùng toán tử rõ (>=, >, <, <=, ==)
+- "result": PHẢI có giá trị SỐ cụ thể tính được
+- Mỗi tổ hợp input PHẢI map tới ĐÚNG MỘT result
+- Bảng PHẢI bao phủ TẤT CẢ trường hợp hợp lệ
+
+**NẾU STATE TRANSITION:**
+- Mỗi item: {"condition": "Trạng thái: X → Y | Sự kiện: Z", "result": "Điều kiện: ..."}
+- scenario PHẢI mô tả rõ: danh sách trạng thái, sự kiện trigger, điều kiện chuyển
+
+**Bước 3: Câu hỏi (PHẢI chia sub-yêu cầu):**
+- "a) Xác định kỹ thuật kiểm thử hộp đen phù hợp nhất và giải thích lý do. (10 điểm)
+   b) Liệt kê các lớp tương đương / giá trị biên / trạng thái / tổ hợp điều kiện. (10 điểm)
+   c) Thiết kế tối thiểu 7 test cases theo bảng:
+      | TC_ID | Mô tả | Input | Expected Output | Loại (Valid/Invalid/Boundary) |
+      Bao gồm ít nhất 2 boundary values và 1 invalid case. (30 điểm)"
+
+---
+
+## HINTS GENERATION
+
+Cho câu hỏi Testing, tạo 3 hints theo cấp độ:
+- Level 1 (5 coins): Gợi ý kỹ thuật kiểm thử phù hợp
+- Level 2 (8 coins): Liệt kê lớp tương đương/giá trị biên
+- Level 3 (12 coins): Ví dụ test cases hoàn chỉnh
+
+Mỗi hint có: level, cost, preview (max 50 chars), content (chi tiết)
+
+**RÀNG BUỘC HINT (BẮT BUỘC):**
+- Hints PHẢI dùng DỮ LIỆU CỤ THỂ từ scenario và rules_table của đề đang tạo
+- TUYỆT ĐỐI KHÔNG sao chép giá trị từ ví dụ khác
+- Level 3 PHẢI có test cases với expected output TÍNH TOÁN ĐƯỢC từ rules_table
+
+---
+
+## MODEL ANSWERS (ĐÁP ÁN MẪU)
+
+Bạn PHẢI sinh đáp án mẫu cho câu hỏi Testing:
+- expected_technique: Kỹ thuật kiểm thử chính xác nhất cho bài toán
+- technique_reasoning: Giải thích TẠI SAO kỹ thuật này phù hợp (2-3 câu)
+- equivalence_classes: Danh sách TẤT CẢ lớp tương đương / giá trị biên / trạng thái
+- expected_test_cases: Tối thiểu 8 test cases mẫu HOÀN CHỈNH, tính từ rules_table
+- coverage_requirements: Số lượng tối thiểu mỗi loại test case
+
+**RÀNG BUỘC NHÃN TEST CASE (BẮT BUỘC):**
+- Mỗi test case có type = CHÍNH XÁC 1 trong: "Valid", "Invalid", "Boundary"
+- Số test cases gắn nhãn "Valid" PHẢI >= min_valid_cases
+- Số test cases gắn nhãn "Invalid" PHẢI >= min_invalid_cases
+- Số test cases gắn nhãn "Boundary" PHẢI >= min_boundary_cases
+- Tổng test cases = Valid + Invalid + Boundary >= 8
+- SAU KHI TẠO XONG, hãy ĐẾM LẠI số lượng mỗi nhãn để đảm bảo đủ yêu cầu
+
+---
 
 ## OUTPUT FORMAT (JSON)
 
@@ -258,15 +477,97 @@ Bạn là một chuyên gia soạn đề thi CNTT với 20 năm kinh nghiệm. N
   "exam_title": "string - Tiêu đề cụ thể",
   "sql_part": null,
   "testing_part": {
-    "scenario": "string - Mô tả tình huống nghiệp vụ chi tiết",
+    "scenario": "string - Mô tả tình huống 60-100 từ, có giá trị số cụ thể",
     "rules_table": [
-      {"condition": "string - Điều kiện", "result": "string - Kết quả"}
+      {"condition": "string - Điều kiện với toán tử rõ", "result": "string - Kết quả có số cụ thể"}
     ],
-    "question": "string - Yêu cầu cụ thể cho thí sinh"
+    "question": "string - Yêu cầu chia a), b), c)"
+  },
+  "model_answers": {
+    "sql_part": null,
+    "testing_part": {
+      "expected_technique": "string - EP/BVA/Decision Table/State Transition",
+      "technique_reasoning": "string - Giải thích 2-3 câu tại sao chọn kỹ thuật này",
+      "equivalence_classes": [
+        "string - Lớp tương đương / giá trị biên / trạng thái"
+      ],
+      "expected_test_cases": [
+        {
+          "tc_id": "TC01",
+          "description": "string - Mô tả test case",
+          "input": "string - Giá trị input cụ thể",
+          "expected_output": "string - Kết quả TÍNH TOÁN ĐƯỢC từ rules_table",
+          "type": "Valid|Invalid|Boundary"
+        }
+      ],
+      "coverage_requirements": {
+        "min_valid_cases": 4,
+        "min_invalid_cases": 2,
+        "min_boundary_cases": 2
+      }
+    }
+  },
+  "hints_catalog": {
+    "testing.question": [
+      {"level": 1, "cost": 5, "preview": "string", "content": "string - PHẢI dùng dữ liệu từ scenario"},
+      {"level": 2, "cost": 8, "preview": "string", "content": "string - PHẢI dùng dữ liệu từ scenario"},
+      {"level": 3, "cost": 12, "preview": "string", "content": "string - PHẢI có test cases tính từ rules_table"}
+    ]
   }
 }
 
-**LƯU Ý:** Các con số trong bài Testing PHẢI nhất quán và tính toán được.
+**LƯU Ý:**
+- PHẢI có hints phù hợp với NỘI DUNG CỤ THỂ của đề, KHÔNG copy từ ví dụ mẫu
+- Testing expected_test_cases PHẢI có expected_output TÍNH TOÁN CHÍNH XÁC từ rules_table
+"""
+
+
+REGENERATE_HINTS_PROMPT = """
+Bạn là một chuyên gia soạn đề thi CNTT. Nhiệm vụ: tạo lại TOÀN BỘ hints cho đề thi đã có sẵn.
+
+## DỮ LIỆU ĐỀ THI HIỆN TẠI:
+
+{exam_data_json}
+
+## YÊU CẦU:
+
+Dựa trên nội dung đề thi ở trên, tạo hints MỚI HOÀN TOÀN cho tất cả câu hỏi.
+
+### RÀNG BUỘC HINT (BẮT BUỘC):
+- Hints PHẢI sử dụng DỮ LIỆU CỤ THỂ từ scenario, rules_table, ERD, và questions của đề
+- TUYỆT ĐỐI KHÔNG dùng giá trị mẫu từ đề khác
+- Level 3 hint cho Testing PHẢI có test cases với expected output TÍNH TOÁN ĐƯỢC từ rules_table
+- Mỗi hint SQL PHẢI tham chiếu đến TÊN BẢNG và TÊN CỘT cụ thể từ ERD
+
+### Cấp độ hint:
+- Level 1 (5 coins): Gợi ý khái niệm/hướng tiếp cận cơ bản
+- Level 2 (8 coins): Hướng dẫn cụ thể hơn (cấu trúc query, lớp tương đương...)
+- Level 3 (12 coins): Gần như giải pháp hoàn chỉnh
+
+### OUTPUT FORMAT (JSON):
+
+{{
+  "hints_catalog": {{
+    "sql.question_1": [
+      {{"level": 1, "cost": 5, "preview": "string max 50 chars", "content": "string chi tiết"}},
+      {{"level": 2, "cost": 8, "preview": "string", "content": "string"}},
+      {{"level": 3, "cost": 12, "preview": "string", "content": "string"}}
+    ],
+    "sql.question_2": [
+      {{"level": 1, "cost": 5, "preview": "string", "content": "string"}},
+      {{"level": 2, "cost": 8, "preview": "string", "content": "string"}},
+      {{"level": 3, "cost": 12, "preview": "string", "content": "string"}}
+    ],
+    "testing.question": [
+      {{"level": 1, "cost": 5, "preview": "string", "content": "string - PHẢI dùng dữ liệu từ scenario"}},
+      {{"level": 2, "cost": 8, "preview": "string", "content": "string - PHẢI dùng dữ liệu từ scenario"}},
+      {{"level": 3, "cost": 12, "preview": "string", "content": "string - PHẢI có test cases tính từ rules_table"}}
+    ]
+  }}
+}}
+
+CHỈ trả về hints_catalog, KHÔNG trả về exam_title, sql_part, testing_part.
+Chỉ include hints cho các phần tồn tại trong đề (nếu sql_part là null thì không tạo sql hints).
 """
 
 
@@ -356,6 +657,44 @@ class ExamGeneratorService:
             error_msg = f"Error generating exam content: {str(e)}"
             raise RuntimeError(error_msg) from e
 
+    async def regenerate_hints(self, exam_data: dict[str, Any]) -> dict[str, Any]:
+        """Regenerate hints for an existing exam based on its content.
+        
+        Args:
+            exam_data: The current exam data (sql_part, testing_part).
+            
+        Returns:
+            dict: New hints_catalog dictionary.
+            
+        Raises:
+            json.JSONDecodeError: If the AI response is not valid JSON.
+            RuntimeError: For any API-related errors during generation.
+        """
+        try:
+            exam_json_str = json.dumps(exam_data, ensure_ascii=False, indent=2)
+            prompt = REGENERATE_HINTS_PROMPT.format(exam_data_json=exam_json_str)
+
+            response = await asyncio.to_thread(
+                self._call_gemini_api_with_prompt,
+                prompt,
+            )
+
+            result = json.loads(response.text)
+
+            if "hints_catalog" not in result:
+                raise ValueError("Missing 'hints_catalog' in regenerated hints")
+
+            return result["hints_catalog"]
+
+        except json.JSONDecodeError as e:
+            error_msg = f"Failed to parse AI hints response as JSON: {e.msg}"
+            raise json.JSONDecodeError(error_msg, e.doc, e.pos) from e
+        except ValueError:
+            raise
+        except Exception as e:
+            error_msg = f"Error regenerating hints: {str(e)}"
+            raise RuntimeError(error_msg) from e
+
     def _call_gemini_api(self) -> Any:
         """Call Gemini API synchronously (run in thread pool).
         
@@ -363,6 +702,24 @@ class ExamGeneratorService:
             Response object from Gemini API.
         """
         prompt = self._get_prompt_for_exam_type()
+        return self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=GENERATION_TEMPERATURE
+            )
+        )
+
+    def _call_gemini_api_with_prompt(self, prompt: str) -> Any:
+        """Call Gemini API with a custom prompt synchronously.
+        
+        Args:
+            prompt: The prompt string to send to Gemini.
+            
+        Returns:
+            Response object from Gemini API.
+        """
         return self.client.models.generate_content(
             model=self.model_name,
             contents=prompt,
@@ -417,3 +774,56 @@ class ExamGeneratorService:
                 raise ValueError(
                     f"Missing required keys in testing_part: {testing_missing}"
                 )
+        
+        # Validate hints_catalog
+        if 'hints_catalog' not in exam_data:
+            raise ValueError("Missing 'hints_catalog' in exam data")
+        
+        hints = exam_data['hints_catalog']
+        
+        # Validate SQL hints if SQL part exists
+        if exam_data.get('sql_part'):
+            questions = exam_data['sql_part'].get('questions', [])
+            for i in range(1, len(questions) + 1):
+                key = f"sql.question_{i}"
+                if key not in hints:
+                    raise ValueError(f"Missing hints for {key}")
+                self._validate_hint_levels(hints[key], key)
+        
+        # Validate Testing hints if Testing part exists
+        if exam_data.get('testing_part'):
+            # Support both new key "testing.question" and legacy "testing.question_1"
+            key = "testing.question"
+            legacy_key = "testing.question_1"
+            if key not in hints and legacy_key not in hints:
+                raise ValueError(f"Missing hints for {key}")
+            actual_key = key if key in hints else legacy_key
+            self._validate_hint_levels(hints[actual_key], actual_key)
+
+    def _validate_hint_levels(self, hint_list: list, question_key: str) -> None:
+        """Validate that a hint list has exactly 3 levels with correct structure.
+        
+        Args:
+            hint_list: List of hints for a question.
+            question_key: The question key (e.g., 'sql.question_1').
+            
+        Raises:
+            ValueError: If hint structure is invalid.
+        """
+        if len(hint_list) != 3:
+            raise ValueError(f"{question_key} must have exactly 3 hints, got {len(hint_list)}")
+        
+        expected_costs = [5, 8, 12]
+        for i, hint in enumerate(hint_list, 1):
+            if hint.get('level') != i:
+                raise ValueError(
+                    f"{question_key} hint {i}: expected level={i}, got {hint.get('level')}"
+                )
+            if hint.get('cost') != expected_costs[i-1]:
+                raise ValueError(
+                    f"{question_key} hint {i}: expected cost={expected_costs[i-1]}, got {hint.get('cost')}"
+                )
+            if not hint.get('preview'):
+                raise ValueError(f"{question_key} hint {i}: missing 'preview'")
+            if not hint.get('content'):
+                raise ValueError(f"{question_key} hint {i}: missing 'content'")
